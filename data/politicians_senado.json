@@ -1,0 +1,68 @@
+[
+  {
+    "slug": "davi-alcolumbre",
+    "name": "Davi Alcolumbre",
+    "role": "Senador(a) (AP)",
+    "party": "UNIÃO",
+    "aliases": [
+      "Davi Alcolumbre",
+      "Alcolumbre"
+    ],
+    "senado_id": "3830"
+  },
+  {
+    "slug": "flavio-bolsonaro",
+    "name": "Flávio Bolsonaro",
+    "role": "Senador(a) (RJ)",
+    "party": "PL",
+    "aliases": [
+      "Flávio Bolsonaro",
+      "Bolsonaro"
+    ],
+    "senado_id": "5894"
+  },
+  {
+    "slug": "damares-alves",
+    "name": "Damares Alves",
+    "role": "Senador(a) (DF)",
+    "party": "REPUBLICANOS",
+    "aliases": [
+      "Damares Alves",
+      "Alves"
+    ],
+    "senado_id": "6335"
+  },
+  {
+    "slug": "humberto-costa",
+    "name": "Humberto Costa",
+    "role": "Senador(a) (PE)",
+    "party": "PT",
+    "aliases": [
+      "Humberto Costa",
+      "Costa"
+    ],
+    "senado_id": "5008"
+  },
+  {
+    "slug": "jaques-wagner",
+    "name": "Jaques Wagner",
+    "role": "Senador(a) (BA)",
+    "party": "PT",
+    "aliases": [
+      "Jaques Wagner",
+      "Wagner"
+    ],
+    "senado_id": "581"
+  },
+  {
+    "slug": "hamilton-mourao",
+    "name": "Hamilton Mourão",
+    "role": "Senador(a) (RS)",
+    "party": "REPUBLICANOS",
+    "aliases": [
+      "Hamilton Mourão",
+      "Mourão"
+    ],
+    "senado_id": "6341"
+  }
+]

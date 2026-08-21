@@ -1,0 +1,12 @@
+# O MVP usa apenas biblioteca padrão do Python (xml.etree, urllib, subprocess).
+# Nenhuma dependência externa é necessária para rodar o pipeline básico.
+#
+# Dependências OPCIONAIS, só necessárias se você ativar os recursos
+# correspondentes:
+# spacy             # backend de NER via spaCy (main.py --backend spacy)
+#   pt_core_news_lg
+# anthropic         # resumo automático de commit message via LLM (main.py --summarize)
+#
+# Outras sugestões para evoluir o projeto (não usadas ainda):
+# feedparser        # parser de RSS mais robusto que lida com feeds malformados
+# GitPython         # alternativa ao uso de subprocess para chamadas git

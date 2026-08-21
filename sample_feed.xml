@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Exemplo Fonte 1 - Política</title>
+    <link>https://exemplo.com</link>
+    <description>Feed de exemplo para testes</description>
+    <item>
+      <title>Lula participa de reunião de cúpula do Mercosul</title>
+      <description>Presidente discute integração regional e comércio exterior com líderes do bloco.</description>
+      <link>https://exemplo.com/noticia/1001</link>
+      <pubDate>Tue, 18 Aug 2026 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Arthur Lira anuncia pauta prioritária do segundo semestre</title>
+      <description>Presidente da Câmara define calendário de votações para os próximos meses.</description>
+      <link>https://exemplo.com/noticia/1002</link>
+      <pubDate>Tue, 18 Aug 2026 13:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Tarcísio de Freitas assina convênio de investimento em rodovias</title>
+      <description>Governador de São Paulo anuncia pacote de R$ 2 bilhões para infraestrutura viária.</description>
+      <link>https://exemplo.com/noticia/1003</link>
+      <pubDate>Tue, 18 Aug 2026 12:15:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Flávio Dino profere voto em julgamento no STF</title>
+      <description>Ministro vota em ação sobre repartição de recursos entre estados.</description>
+      <link>https://exemplo.com/noticia/1004</link>
+      <pubDate>Tue, 18 Aug 2026 11:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Notícia sobre time de futebol não relacionada à política</title>
+      <description>Resultado da rodada do campeonato regional.</description>
+      <link>https://exemplo.com/noticia/1005</link>
+      <pubDate>Tue, 18 Aug 2026 10:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<ListaParlamentarEmExercicio>
+  <Parlamentares>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>3830</CodigoParlamentar>
+        <NomeParlamentar>Davi Alcolumbre</NomeParlamentar>
+        <SiglaPartidoParlamentar>UNIÃO</SiglaPartidoParlamentar>
+        <UfParlamentar>AP</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>5894</CodigoParlamentar>
+        <NomeParlamentar>Flávio Bolsonaro</NomeParlamentar>
+        <SiglaPartidoParlamentar>PL</SiglaPartidoParlamentar>
+        <UfParlamentar>RJ</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>6335</CodigoParlamentar>
+        <NomeParlamentar>Damares Alves</NomeParlamentar>
+        <SiglaPartidoParlamentar>REPUBLICANOS</SiglaPartidoParlamentar>
+        <UfParlamentar>DF</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>5008</CodigoParlamentar>
+        <NomeParlamentar>Humberto Costa</NomeParlamentar>
+        <SiglaPartidoParlamentar>PT</SiglaPartidoParlamentar>
+        <UfParlamentar>PE</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>581</CodigoParlamentar>
+        <NomeParlamentar>Jaques Wagner</NomeParlamentar>
+        <SiglaPartidoParlamentar>PT</SiglaPartidoParlamentar>
+        <UfParlamentar>BA</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+    <Parlamentar>
+      <IdentificacaoParlamentar>
+        <CodigoParlamentar>6341</CodigoParlamentar>
+        <NomeParlamentar>Hamilton Mourão</NomeParlamentar>
+        <SiglaPartidoParlamentar>REPUBLICANOS</SiglaPartidoParlamentar>
+        <UfParlamentar>RS</UfParlamentar>
+      </IdentificacaoParlamentar>
+    </Parlamentar>
+  </Parlamentares>
+</ListaParlamentarEmExercicio>

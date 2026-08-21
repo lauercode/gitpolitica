@@ -1,0 +1,66 @@
+name: Atualiza GitPolítica
+
+# Dois gatilhos de agendamento diferentes:
+#   - a cada 30 min: busca notícias novas e commita
+#   - 1x por dia (03:00 UTC): também resincroniza a lista de deputados/
+#     senadores, já que ela muda com pouca frequência e cada sync faz
+#     dezenas de chamadas à API — não faz sentido rodar isso a cada 30 min
+#
+# Mais "workflow_dispatch" pra permitir rodar manualmente pela aba
+# Actions do GitHub, útil pra testar a configuração pela primeira vez.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código (este repositório)
+        uses: actions/checkout@v4
+
+      - name: Checkout do repositório de dados
+        # Este é o repositório que vira o "GitHub da política" de
+        # verdade — onde os commits de notícias se acumulam. Precisa
+        # ser um repositório GitHub separado (pode começar vazio) e um
+        # token com permissão de escrita nele, salvo como secret
+        # DATA_REPO_TOKEN neste repositório de código.
+        uses: actions/checkout@v4
+        with:
+          repository: SEU-USUARIO/gitpolitica-data
+          token: ${{ secrets.DATA_REPO_TOKEN }}
+          path: data/repo
+          fetch-depth: 0
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sincroniza deputados/senadores (só na run diária)
+        if: github.event.schedule == '0 3 * * *'
+        run: python3 sync_politicians.py
+        env:
+          GITPOLITICA_REPO_DIR: data/repo
+
+      - name: Roda o pipeline de notícias (busca RSS + commita)
+        run: python3 main.py
+        env:
+          GITPOLITICA_REPO_DIR: data/repo
+          # Descomente as linhas abaixo para ativar os backends
+          # opcionais (veja o restante do README para os requisitos de
+          # cada um: pacotes extras + secrets configurados):
+          # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Publica o histórico atualizado no repositório de dados
+        working-directory: data/repo
+        run: |
+          git push origin HEAD:main
+
+      - name: Publica o site no GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: data/site

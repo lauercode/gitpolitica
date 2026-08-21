@@ -1,0 +1,90 @@
+[
+  {
+    "slug": "arthur-lira",
+    "name": "Arthur Lira",
+    "role": "Deputado(a) Federal (AL)",
+    "party": "PP",
+    "aliases": [
+      "Arthur Lira",
+      "Lira"
+    ],
+    "camara_id": 160541
+  },
+  {
+    "slug": "hugo-motta",
+    "name": "Hugo Motta",
+    "role": "Deputado(a) Federal (PB)",
+    "party": "REPUBLICANOS",
+    "aliases": [
+      "Hugo Motta",
+      "Motta"
+    ],
+    "camara_id": 160674
+  },
+  {
+    "slug": "marina-silva",
+    "name": "Marina Silva",
+    "role": "Deputado(a) Federal (SP)",
+    "party": "REDE",
+    "aliases": [
+      "Marina Silva",
+      "Silva"
+    ],
+    "camara_id": 220637
+  },
+  {
+    "slug": "erika-hilton",
+    "name": "Erika Hilton",
+    "role": "Deputado(a) Federal (SP)",
+    "party": "PSOL",
+    "aliases": [
+      "Erika Hilton",
+      "Hilton"
+    ],
+    "camara_id": 220645
+  },
+  {
+    "slug": "gleisi-hoffmann",
+    "name": "Gleisi Hoffmann",
+    "role": "Deputado(a) Federal (PR)",
+    "party": "PT",
+    "aliases": [
+      "Gleisi Hoffmann",
+      "Hoffmann"
+    ],
+    "camara_id": 107283
+  },
+  {
+    "slug": "bia-kicis",
+    "name": "Bia Kicis",
+    "role": "Deputado(a) Federal (DF)",
+    "party": "PL",
+    "aliases": [
+      "Bia Kicis",
+      "Kicis"
+    ],
+    "camara_id": 204374
+  },
+  {
+    "slug": "glauber-braga",
+    "name": "Glauber Braga",
+    "role": "Deputado(a) Federal (RJ)",
+    "party": "PSOL",
+    "aliases": [
+      "Glauber Braga",
+      "Braga"
+    ],
+    "camara_id": 152605
+  },
+  {
+    "slug": "kim-kataguiri",
+    "name": "Kim Kataguiri",
+    "role": "Deputado(a) Federal (SP)",
+    "party": "MISSÃO",
+    "aliases": [
+      "Kim Kataguiri",
+      "Kataguiri"
+    ],
+    "camara_id": 204536
+  }
+]

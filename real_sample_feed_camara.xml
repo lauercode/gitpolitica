@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel>
+        <title>Câmara notícias - Câmara dos Deputados</title>
+        <link>https://www2.camara.leg.br/camaranoticias</link>
+        <description>Câmara Notícias</description>
+        <item>
+            <title><![CDATA[Conselho de Ética aprova prosseguimento de processo contra Erika Hilton por quebra de decoro]]></title>
+            <link>https://www.camara.leg.br/noticias/1296434-conselho-de-etica-aprova-prosseguimento-de-processo-contra-erika-hilton-por-quebra-de-decoro</link>
+            <pubDate>Tue, 11 Aug 2026 18:26:00 GMT</pubDate>
+            <description><![CDATA[Partido Missão questiona post em que a deputada fala que não está preocupada com as opiniões "de transfóbicos"]]></description>
+        </item>
+        <item>
+            <title><![CDATA[Hugo Motta afirma que nova lei fortalece atuação do STJ em recursos especiais]]></title>
+            <link>https://www.camara.leg.br/noticias/1295202-hugo-motta-afirma-que-nova-lei-fortalece-atuacao-do-stj-em-recursos-especiais</link>
+            <pubDate>Wed, 05 Aug 2026 13:08:00 GMT</pubDate>
+            <description><![CDATA[Norma regulamenta o filtro de relevância para recursos especiais e define critérios para análise pelo tribunal]]></description>
+        </item>
+        <item>
+            <title><![CDATA[Motta critica novas tarifas dos Estados Unidos sobre produtos brasileiros e defende setor produtivo]]></title>
+            <link>https://www.camara.leg.br/noticias/1292359-motta-critica-novas-tarifas-dos-estados-unidos-sobre-produtos-brasileiros-e-defende-setor-produtivo</link>
+            <pubDate>Fri, 17 Jul 2026 13:18:00 GMT</pubDate>
+            <description><![CDATA[Presidente da Câmara dos Deputados lembra que a Lei da Reciprocidade Econômica pode ser usada para defender os interesses nacionais]]></description>
+        </item>
+        <item>
+            <title><![CDATA[Mais de 80 vetos trancam pauta do Congresso na volta do recesso]]></title>
+            <link>https://www.camara.leg.br/noticias/1295191-mais-de-80-vetos-trancam-pauta-do-congresso-na-volta-do-recesso</link>
+            <pubDate>Wed, 05 Aug 2026 15:40:00 GMT</pubDate>
+            <description><![CDATA[Pauta do Congresso tem 99 vetos presidenciais aguardando análise]]></description>
+        </item>
+    </channel>
+</rss>
