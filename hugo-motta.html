@@ -13,6 +13,20 @@
   .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
   .commit-date { color: #59636e; font-size: 0.85em; }
   .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -22,9 +36,27 @@
   <h2>Histórico de commits</h2>
   
         <div class="commit">
+          <div class="commit-msg">notícia: Lula viaja com Motta para agenda no RN uma semana após agenda com Alcolumbre no Amapá (fonte: G1 - Política:)</div>
+          <div class="commit-hash">6b6a7c7a</div>
+          <div class="commit-date">2026-08-22T22:10:50Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Otto Alencar acerta com Alcolumbre relatores das PECs da Segurança e do fim da escala 6x1 (fonte: G1 - Política:)</div>
+          <div class="commit-hash">a59717e4</div>
+          <div class="commit-date">2026-08-22T22:09:29Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Hugo Motta afirma que nova lei fortalece atuação do STJ em recursos especiais (fonte: Agência Câmara - Política)</div>
+          <div class="commit-hash">e6d46d41</div>
+          <div class="commit-date">2026-08-21T03:04:25Z</div>
+        </div>
+        
+        <div class="commit">
           <div class="commit-msg">init: cria arquivo de Hugo Motta</div>
-          <div class="commit-hash">d5b63b54</div>
-          <div class="commit-date">2026-08-20T02:01:27+00:00</div>
+          <div class="commit-hash">bde25a29</div>
+          <div class="commit-date">2026-08-21T03:00:25Z</div>
         </div>
         
 </body>

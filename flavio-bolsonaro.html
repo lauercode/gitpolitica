@@ -13,6 +13,20 @@
   .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
   .commit-date { color: #59636e; font-size: 0.85em; }
   .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -22,9 +36,297 @@
   <h2>Histórico de commits</h2>
   
         <div class="commit">
+          <div class="commit-msg">notícia: O 'efeito contraste' de Renan Santos nas eleições de 2026 (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">bf7c3d63</div>
+          <div class="commit-date">2026-08-22T22:11:29Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha: Flávio obtém apoio apenas parcial da direita em segundo turno contra Lula (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">784addfe</div>
+          <div class="commit-date">2026-08-22T22:11:27Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Flávio deixa de lado 'Bolsonaro moderado' e defende tirar bandido 'de pé ou deitado' (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">077567f2</div>
+          <div class="commit-date">2026-08-22T22:11:20Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha: Flávio tem 47%, e Lula, 42% em SP no 2º turno; MG marca empate (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">da9f65fe</div>
+          <div class="commit-date">2026-08-22T22:11:09Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Manifestantes protestam contra Tarcísio durante agenda de Flávio Bolsonaro em SP (fonte: G1 - Política:)</div>
+          <div class="commit-hash">dae1b664</div>
+          <div class="commit-date">2026-08-22T22:10:52Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Tarcísio contraria Flávio Bolsonaro e defende urnas eletrônicas: 'foram elas que me elegeram' (fonte: G1 - Política:)</div>
+          <div class="commit-hash">de61254c</div>
+          <div class="commit-date">2026-08-22T22:10:39Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Flávio Bolsonaro diz que já prestou contas sobre 'Dark Horse' e tenta colar caso Master a Lula (fonte: G1 - Política:)</div>
+          <div class="commit-hash">a0a08eee</div>
+          <div class="commit-date">2026-08-22T22:10:37Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Haddad diz que impeachment de ministro do STF exige cautela e não pode ser usado por 'conveniência política' (fonte: G1 - Política:)</div>
+          <div class="commit-hash">fef73b6b</div>
+          <div class="commit-date">2026-08-22T22:10:25Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Mendonça manda remover vídeo com deepfake de Flávio Bolsonaro ao lado de Daniel Vorcaro (fonte: G1 - Política:)</div>
+          <div class="commit-hash">fbe00baa</div>
+          <div class="commit-date">2026-08-22T22:10:18Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Haddad defende tornozeleira eletrônica para agressores de mulheres e diz que eles devem arcar com custo (fonte: G1 - Política:)</div>
+          <div class="commit-hash">a4895d32</div>
+          <div class="commit-date">2026-08-22T22:10:17Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha divulga nesta sexta-feira primeira pesquisa da eleição presidencial após início da campanha (fonte: G1 - Política:)</div>
+          <div class="commit-hash">b958f14b</div>
+          <div class="commit-date">2026-08-22T22:09:53Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Mendonça manda PF investigar suspeita de novos vazamentos em caso de Lulinha (fonte: G1 - Política:)</div>
+          <div class="commit-hash">aeaaf446</div>
+          <div class="commit-date">2026-08-22T22:09:48Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: TSE define tempo de TV dos candidatos a presidente; veja o tempo de cada um (fonte: G1 - Política:)</div>
+          <div class="commit-hash">83f104de</div>
+          <div class="commit-date">2026-08-22T22:09:46Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: 'Quem são os candidatos': g1 lança ferramenta com dados do TSE e páginas para todos os candidatos (fonte: G1 - Política:)</div>
+          <div class="commit-hash">4b9c0673</div>
+          <div class="commit-date">2026-08-22T22:09:42Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Passados 30 dias de ordem de Moraes, defesa de Bolsonaro diz ao STF que retomará agendamento de visitas sem cunho eleitoral (fonte: G1 - Política:)</div>
+          <div class="commit-hash">6d180902</div>
+          <div class="commit-date">2026-08-22T22:09:40Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Moraes autoriza Jair Bolsonaro a voltar a receber visitas dos filhos Carlos e Jair Renan na prisão domiciliar (fonte: G1 - Política:)</div>
+          <div class="commit-hash">bf61e509</div>
+          <div class="commit-date">2026-08-22T22:09:34Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Haddad propõe criação de banco 'nos moldes do BNDES' para financiar reindustrialização de SP (fonte: G1 - Política:)</div>
+          <div class="commit-hash">653f391d</div>
+          <div class="commit-date">2026-08-22T22:09:31Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: É #FAKE que PF descobriu 'fábrica de fake news' criada para beneficiar Flávio Bolsonaro; foto foi feita com inteligência artificial (fonte: G1 - Política:)</div>
+          <div class="commit-hash">2fc2bed0</div>
+          <div class="commit-date">2026-08-22T22:09:25Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Em ligação com Lula, Trump quis saber sobre eleições no Brasil e ouviu que processo corre bem e de forma confiável (fonte: G1 - Política:)</div>
+          <div class="commit-hash">443449c1</div>
+          <div class="commit-date">2026-08-22T22:09:20Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha - 2º turno: Lula, 47%; Flávio Bolsonaro, 43% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">ae73cf86</div>
+          <div class="commit-date">2026-08-22T22:09:05Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha - 1º turno: Lula, 39%; Flávio, 33%; Caiado, 5%; Renan, 4%; Zema, 3%; Cury, 2% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">1e9b8739</div>
+          <div class="commit-date">2026-08-22T22:09:01Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha: 50% desaprovam governo Lula, e 47% aprovam (fonte: G1 - Política:)</div>
+          <div class="commit-hash">c5cbca47</div>
+          <div class="commit-date">2026-08-22T22:08:35Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha: 72% dizem estar decididos sobre voto para presidente, e 27% ainda podem mudar; veja números por candidato (fonte: G1 - Política:)</div>
+          <div class="commit-hash">2ed124fb</div>
+          <div class="commit-date">2026-08-22T22:08:30Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: 'Dark Horse': PF pede à Ancine informações sobre cinebiografia de Jair Bolsonaro (fonte: G1 - Política:)</div>
+          <div class="commit-hash">6c8a7bb8</div>
+          <div class="commit-date">2026-08-22T22:08:26Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Augusto Cury (Avante) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">05c408ad</div>
+          <div class="commit-date">2026-08-22T22:08:25Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Ronaldo Caiado (PSD) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">606c238f</div>
+          <div class="commit-date">2026-08-22T22:08:23Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Renan Santos (Missão) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">18bb3b0e</div>
+          <div class="commit-date">2026-08-22T22:08:22Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Lula (PT) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">e48bbb61</div>
+          <div class="commit-date">2026-08-22T22:08:21Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Flávio Bolsonaro (PL) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">1f31a8eb</div>
+          <div class="commit-date">2026-08-22T22:08:19Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Romeu Zema (Novo) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">f7c379e3</div>
+          <div class="commit-date">2026-08-22T22:08:18Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha, 1º turno: veja intenção de voto por região, gênero, idade, posição política e religião no cenário com Pablo Marçal (fonte: G1 - Política:)</div>
+          <div class="commit-hash">e46b0a9f</div>
+          <div class="commit-date">2026-08-22T22:08:13Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha, 1º turno: veja intenção de voto por região, gênero, idade, posição política e religião (fonte: G1 - Política:)</div>
+          <div class="commit-hash">23ed4946</div>
+          <div class="commit-date">2026-08-22T22:07:55Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Eleições 2026: Só 1 partido tem mais mulheres do que homens entre candidatos (fonte: G1 - Política:)</div>
+          <div class="commit-hash">087e6e21</div>
+          <div class="commit-date">2026-08-22T22:07:35Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Tarcísio diz que estará com Flávio Bolsonaro e lamenta possíveis ausências em debates presidenciais: 'Gostaria de vê-los' (fonte: G1 - Política:)</div>
+          <div class="commit-hash">51c4d4aa</div>
+          <div class="commit-date">2026-08-22T22:07:29Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Flávio diz que 'narcoterroristas' têm até dezembro para ‘meter o pé’ do Brasil e promete ‘guerra’ contra criminosos (fonte: G1 - Política:)</div>
+          <div class="commit-hash">fc9b6d0c</div>
+          <div class="commit-date">2026-08-22T22:07:26Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: No RJ, Lula diz que, se reeleito, vai retirar facções e devolver território sem 'matar 100, 200' (fonte: G1 - Política:)</div>
+          <div class="commit-hash">9b4f1bce</div>
+          <div class="commit-date">2026-08-22T22:07:23Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Em eventos de campanha no Rio, Lula defende prender criminosos, e Flávio fala em ‘guerra’ ao crime (fonte: G1 - Política:)</div>
+          <div class="commit-hash">25784016</div>
+          <div class="commit-date">2026-08-22T22:07:19Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha em MG: Lula, 37%; Flávio Bolsonaro, 31%; Zema, 10% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">6dff14fb</div>
+          <div class="commit-date">2026-08-22T22:07:15Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha em SP: Flávio Bolsonaro, 37%; Lula, 33%; Renan, 5%; Caiado, 4%; Zema, 3%; Cury, 3% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">a9390e2f</div>
+          <div class="commit-date">2026-08-22T22:07:12Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha no DF: Flávio Bolsonaro, 39%; Lula, 31%; Caiado; 10%; Renan, 3%; Zema, 2%; Cury, 1% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">fd90cc3a</div>
+          <div class="commit-date">2026-08-22T22:07:10Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha em PE: Lula, 56%; Flávio Bolsonaro, 24%; Caiado; 2%; Renan; 2%; Zema, 1%; Cury, 1% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">9e174d37</div>
+          <div class="commit-date">2026-08-22T22:07:06Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">ebe6679c</div>
+          <div class="commit-date">2026-08-22T13:08:24Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira como foi a quarta-feira dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">b93242f5</div>
+          <div class="commit-date">2026-08-22T02:27:59Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira a agenda dos candidatos à Presidência nesta quinta-feira (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">0768580a</div>
+          <div class="commit-date">2026-08-22T02:27:59Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: TSE divulga tempo dos candidatos à Presidência no horário eleitoral (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">b8d33581</div>
+          <div class="commit-date">2026-08-22T02:27:58Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Veja como foi a quinta-feira (20) dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">cd878384</div>
+          <div class="commit-date">2026-08-22T02:27:58Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira a agenda dos candidatos à Presidência nesta sexta-feira (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">0ea4c16e</div>
+          <div class="commit-date">2026-08-22T02:27:58Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Veja como foi a sexta-feira (21) dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">a738c1d9</div>
+          <div class="commit-date">2026-08-22T02:27:58Z</div>
+        </div>
+        
+        <div class="commit">
           <div class="commit-msg">init: cria arquivo de Flávio Bolsonaro</div>
-          <div class="commit-hash">2d9d33f5</div>
-          <div class="commit-date">2026-08-20T02:01:28+00:00</div>
+          <div class="commit-hash">32bcffeb</div>
+          <div class="commit-date">2026-08-21T03:00:25Z</div>
         </div>
         
 </body>

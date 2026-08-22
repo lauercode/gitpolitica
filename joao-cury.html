@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="utf-8"><title>João Cury — GitPolítica</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1f2328; background: #fff; }
+  h1 { border-bottom: 1px solid #d1d9e0; padding-bottom: 10px; }
+  .politician-card { border: 1px solid #d1d9e0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .politician-card a { text-decoration: none; color: #0969da; font-weight: 600; font-size: 1.1em; }
+  .meta { color: #59636e; font-size: 0.9em; }
+  .commit { border-bottom: 1px solid #eaeef2; padding: 10px 0; }
+  .commit:last-child { border-bottom: none; }
+  .commit-msg { font-weight: 500; }
+  .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
+  .commit-date { color: #59636e; font-size: 0.85em; }
+  .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
+</style>
+</head>
+<body>
+  <a class="back-link" href="index.html">&larr; voltar</a>
+  <h1>João Cury</h1>
+  <p class="meta">Deputado(a) Federal (SP) · MDB</p>
+  <h2>Histórico de commits</h2>
+  
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha divulga nesta sexta-feira primeira pesquisa da eleição presidencial após início da campanha (fonte: G1 - Política:)</div>
+          <div class="commit-hash">9350f3cc</div>
+          <div class="commit-date">2026-08-22T22:09:54Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha - 1º turno: Lula, 39%; Flávio, 33%; Caiado, 5%; Renan, 4%; Zema, 3%; Cury, 2% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">2bbf9c76</div>
+          <div class="commit-date">2026-08-22T22:09:01Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Entrevistas com os candidatos a presidente: Augusto Cury (Avante) (fonte: G1 - Política:)</div>
+          <div class="commit-hash">65eebd5d</div>
+          <div class="commit-date">2026-08-22T22:08:25Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Eleições 2026: Só 1 partido tem mais mulheres do que homens entre candidatos (fonte: G1 - Política:)</div>
+          <div class="commit-hash">cd636576</div>
+          <div class="commit-date">2026-08-22T22:07:35Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Em eventos de campanha no Rio, Lula defende prender criminosos, e Flávio fala em ‘guerra’ ao crime (fonte: G1 - Política:)</div>
+          <div class="commit-hash">65b15fbe</div>
+          <div class="commit-date">2026-08-22T22:07:20Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha em SP: Flávio Bolsonaro, 37%; Lula, 33%; Renan, 5%; Caiado, 4%; Zema, 3%; Cury, 3% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">ee4f4d49</div>
+          <div class="commit-date">2026-08-22T22:07:12Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha no DF: Flávio Bolsonaro, 39%; Lula, 31%; Caiado; 10%; Renan, 3%; Zema, 2%; Cury, 1% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">cc9e48b3</div>
+          <div class="commit-date">2026-08-22T22:07:10Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Datafolha em PE: Lula, 56%; Flávio Bolsonaro, 24%; Caiado; 2%; Renan; 2%; Zema, 1%; Cury, 1% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">99a231b7</div>
+          <div class="commit-date">2026-08-22T22:07:06Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira como foi a quarta-feira dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">0a6f24ef</div>
+          <div class="commit-date">2026-08-22T03:39:24Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira a agenda dos candidatos à Presidência nesta quinta-feira (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">20236c9b</div>
+          <div class="commit-date">2026-08-22T03:39:21Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: TSE divulga tempo dos candidatos à Presidência no horário eleitoral (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">b2c1bb55</div>
+          <div class="commit-date">2026-08-22T03:39:16Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Veja como foi a quinta-feira (20) dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">c4e7fb1b</div>
+          <div class="commit-date">2026-08-22T03:39:15Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Confira a agenda dos candidatos à Presidência nesta sexta-feira (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">b9cc5ba4</div>
+          <div class="commit-date">2026-08-22T03:39:08Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Veja como foi a sexta-feira (21) dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">1fd33d7d</div>
+          <div class="commit-date">2026-08-22T03:39:03Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">init: cria arquivo de João Cury</div>
+          <div class="commit-hash">53f5d916</div>
+          <div class="commit-date">2026-08-21T03:48:05Z</div>
+        </div>
+        
+</body>
+</html>

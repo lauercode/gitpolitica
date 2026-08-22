@@ -13,6 +13,20 @@
   .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
   .commit-date { color: #59636e; font-size: 0.85em; }
   .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -22,9 +36,15 @@
   <h2>Histórico de commits</h2>
   
         <div class="commit">
+          <div class="commit-msg">notícia: Datafolha no DF, Senado: Michelle, 19%; Leila, 16%; Erika, 12%; Bia, 11% (fonte: G1 - Política:)</div>
+          <div class="commit-hash">8695a2cb</div>
+          <div class="commit-date">2026-08-22T22:08:39Z</div>
+        </div>
+        
+        <div class="commit">
           <div class="commit-msg">init: cria arquivo de Bia Kicis</div>
-          <div class="commit-hash">15bb72cf</div>
-          <div class="commit-date">2026-08-20T02:01:28+00:00</div>
+          <div class="commit-hash">c276252f</div>
+          <div class="commit-date">2026-08-21T03:00:25Z</div>
         </div>
         
 </body>

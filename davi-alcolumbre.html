@@ -13,6 +13,20 @@
   .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
   .commit-date { color: #59636e; font-size: 0.85em; }
   .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -22,9 +36,33 @@
   <h2>Histórico de commits</h2>
   
         <div class="commit">
+          <div class="commit-msg">notícia: Lula viaja com Motta para agenda no RN uma semana após agenda com Alcolumbre no Amapá (fonte: G1 - Política:)</div>
+          <div class="commit-hash">c9ecac09</div>
+          <div class="commit-date">2026-08-22T22:10:51Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Articulador político de Lula vai pedir a Alcolumbre para acelerar tramitação de PECs (fonte: G1 - Política:)</div>
+          <div class="commit-hash">31337b55</div>
+          <div class="commit-date">2026-08-22T22:10:43Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Otto Alencar acerta com Alcolumbre relatores das PECs da Segurança e do fim da escala 6x1 (fonte: G1 - Política:)</div>
+          <div class="commit-hash">e08d0eb9</div>
+          <div class="commit-date">2026-08-22T22:09:29Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Alcolumbre envia PEC do fim da escala 6x1 para CCJ do Senado (fonte: Agência Brasil - Política)</div>
+          <div class="commit-hash">a1bbc5e9</div>
+          <div class="commit-date">2026-08-22T02:27:58Z</div>
+        </div>
+        
+        <div class="commit">
           <div class="commit-msg">init: cria arquivo de Davi Alcolumbre</div>
-          <div class="commit-hash">9439a5b1</div>
-          <div class="commit-date">2026-08-20T02:01:28+00:00</div>
+          <div class="commit-hash">941418bc</div>
+          <div class="commit-date">2026-08-21T03:00:25Z</div>
         </div>
         
 </body>
