@@ -28,7 +28,22 @@ class NewsItem:
 
 def _fetch_raw(url_or_path: str) -> bytes:
     if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
-        with urllib.request.urlopen(url_or_path, timeout=15) as resp:
+        # Alguns servidores (comum em sites de governo) recusam o
+        # User-Agent padrão do urllib ("Python-urllib/3.x"), retornando
+        # 403/406 — a exceção é capturada silenciosamente por
+        # fetch_all_feeds() e o pipeline segue com 0 notícias, sem dar
+        # erro visível. Um User-Agent de navegador evita esse bloqueio.
+        req = urllib.request.Request(
+            url_or_path,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (compatible; GitPoliticaBot/1.0; "
+                    "+https://github.com/lauercode/gitpolitica)"
+                ),
+                "Accept": "application/rss+xml, application/xml, text/xml, */*",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
             return resp.read()
     # caminho local (útil para testes offline)
     with open(url_or_path, "rb") as f:
