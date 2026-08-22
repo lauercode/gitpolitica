@@ -13,119 +13,121 @@
   .commit-hash { font-family: monospace; color: #59636e; font-size: 0.85em; }
   .commit-date { color: #59636e; font-size: 0.85em; }
   .back-link { display: inline-block; margin-bottom: 20px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 1px solid #d1d9e0; border-radius: 6px;
+    font-size: 0.95em; font-family: inherit;
+  }
+  .filters input[type="text"] { flex: 1; min-width: 200px; }
+  .filters button {
+    padding: 8px 14px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .filters button:hover { background: #eaeef2; }
+  #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
+  #no-results { display: none; color: #59636e; padding: 20px 0; }
 </style>
 </head>
 <body>
   <h1>🏛️ GitPolítica</h1>
   <p class="meta">Um "GitHub" da política brasileira — cada político é um arquivo, cada notícia é um commit.</p>
-  
-            <div class="politician-card">
-              <a href="lula.html">Luiz Inácio Lula da Silva</a>
-              <div class="meta">Presidente da República · PT · 9 commits</div>
-              <div class="meta">Último: notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="jair-bolsonaro.html">Jair Bolsonaro</a>
-              <div class="meta">Ex-Presidente · PL · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Jair Bolsonaro</div>
-            </div>
-            
-            <div class="politician-card">
+
+  <div class="filters">
+    <input type="text" id="search" placeholder="Buscar por nome..." oninput="applyFilters()">
+    <select id="filter-party" onchange="applyFilters()">
+      <option value="">Todos os partidos</option>
+      <option value="PL">PL</option><option value="PP">PP</option><option value="PT">PT</option><option value="REPUBLICANOS">REPUBLICANOS</option>
+    </select>
+    <select id="filter-cargo" onchange="applyFilters()">
+      <option value="">Todos os cargos</option>
+      <option value="Deputado(a) Federal">Deputado(a) Federal</option><option value="Ex-Presidente">Ex-Presidente</option><option value="Governador(a)">Governador(a)</option><option value="Ministro(a)">Ministro(a)</option><option value="Presidente da República">Presidente da República</option>
+    </select>
+    <button onclick="clearFilters()">Limpar filtros</button>
+  </div>
+
+  <div id="result-count">5 de 5 políticos</div>
+  <div id="cards-container">
+    
+            <div class="politician-card"
+                 data-name="arthur lira"
+                 data-party="PP"
+                 data-cargo="Deputado(a) Federal">
               <a href="arthur-lira.html">Arthur Lira</a>
               <div class="meta">Deputado Federal · PP · 1 commits</div>
               <div class="meta">Último: init: cria arquivo de Arthur Lira</div>
             </div>
             
-            <div class="politician-card">
+            <div class="politician-card"
+                 data-name="flávio dino"
+                 data-party="-"
+                 data-cargo="Ministro(a)">
               <a href="flavio-dino.html">Flávio Dino</a>
               <div class="meta">Ministro do STF · - · 1 commits</div>
               <div class="meta">Último: init: cria arquivo de Flávio Dino</div>
             </div>
             
-            <div class="politician-card">
+            <div class="politician-card"
+                 data-name="jair bolsonaro"
+                 data-party="PL"
+                 data-cargo="Ex-Presidente">
+              <a href="jair-bolsonaro.html">Jair Bolsonaro</a>
+              <div class="meta">Ex-Presidente · PL · 2 commits</div>
+              <div class="meta">Último: notícia: Veja como foi a quinta-feira (20) dos candidatos a presidente (fonte: Agência Brasil - Política)</div>
+            </div>
+            
+            <div class="politician-card"
+                 data-name="luiz inácio lula da silva"
+                 data-party="PT"
+                 data-cargo="Presidente da República">
+              <a href="lula.html">Luiz Inácio Lula da Silva</a>
+              <div class="meta">Presidente da República · PT · 9 commits</div>
+              <div class="meta">Último: notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
+            </div>
+            
+            <div class="politician-card"
+                 data-name="tarcísio de freitas"
+                 data-party="REPUBLICANOS"
+                 data-cargo="Governador(a)">
               <a href="tarcisio-de-freitas.html">Tarcísio de Freitas</a>
               <div class="meta">Governador de SP · Republicanos · 1 commits</div>
               <div class="meta">Último: init: cria arquivo de Tarcísio de Freitas</div>
             </div>
             
-            <div class="politician-card">
-              <a href="hugo-motta.html">Hugo Motta</a>
-              <div class="meta">Deputado(a) Federal (PB) · REPUBLICANOS · 2 commits</div>
-              <div class="meta">Último: notícia: Hugo Motta afirma que nova lei fortalece atuação do STJ em recursos especiais (fonte: Agência Câmara - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="marina-silva.html">Marina Silva</a>
-              <div class="meta">Deputado(a) Federal (SP) · REDE · 9 commits</div>
-              <div class="meta">Último: notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="erika-hilton.html">Erika Hilton</a>
-              <div class="meta">Deputado(a) Federal (SP) · PSOL · 2 commits</div>
-              <div class="meta">Último: notícia: Conselho de Ética aprova prosseguimento de processo contra Erika Hilton por quebra de decoro (fonte: Agência Câmara - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="gleisi-hoffmann.html">Gleisi Hoffmann</a>
-              <div class="meta">Deputado(a) Federal (PR) · PT · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Gleisi Hoffmann</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="bia-kicis.html">Bia Kicis</a>
-              <div class="meta">Deputado(a) Federal (DF) · PL · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Bia Kicis</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="glauber-braga.html">Glauber Braga</a>
-              <div class="meta">Deputado(a) Federal (RJ) · PSOL · 3 commits</div>
-              <div class="meta">Último: notícia: Confira a agenda dos candidatos à Presidência nesta sexta-feira (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="kim-kataguiri.html">Kim Kataguiri</a>
-              <div class="meta">Deputado(a) Federal (SP) · MISSÃO · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Kim Kataguiri</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="davi-alcolumbre.html">Davi Alcolumbre</a>
-              <div class="meta">Senador(a) (AP) · UNIÃO · 2 commits</div>
-              <div class="meta">Último: notícia: Alcolumbre envia PEC do fim da escala 6x1 para CCJ do Senado (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="flavio-bolsonaro.html">Flávio Bolsonaro</a>
-              <div class="meta">Senador(a) (RJ) · PL · 8 commits</div>
-              <div class="meta">Último: notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="damares-alves.html">Damares Alves</a>
-              <div class="meta">Senador(a) (DF) · REPUBLICANOS · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Damares Alves</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="humberto-costa.html">Humberto Costa</a>
-              <div class="meta">Senador(a) (PE) · PT · 7 commits</div>
-              <div class="meta">Último: notícia: Veja a agenda dos candidatos à Presidência neste fim de semana (fonte: Agência Brasil - Política)</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="jaques-wagner.html">Jaques Wagner</a>
-              <div class="meta">Senador(a) (BA) · PT · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Jaques Wagner</div>
-            </div>
-            
-            <div class="politician-card">
-              <a href="hamilton-mourao.html">Hamilton Mourão</a>
-              <div class="meta">Senador(a) (RS) · REPUBLICANOS · 1 commits</div>
-              <div class="meta">Último: init: cria arquivo de Hamilton Mourão</div>
-            </div>
-            
+  </div>
+  <div id="no-results">Nenhum político encontrado com esses filtros.</div>
+
+  <script>
+    const TOTAL = 5;
+
+    function applyFilters() {
+      const query = document.getElementById('search').value.trim().toLowerCase();
+      const party = document.getElementById('filter-party').value;
+      const cargo = document.getElementById('filter-cargo').value;
+      const cards = document.querySelectorAll('.politician-card');
+      let visibleCount = 0;
+
+      cards.forEach(card => {
+        const matchesName = !query || card.dataset.name.includes(query);
+        const matchesParty = !party || card.dataset.party === party;
+        const matchesCargo = !cargo || card.dataset.cargo === cargo;
+        const show = matchesName && matchesParty && matchesCargo;
+        card.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+      });
+
+      document.getElementById('result-count').textContent =
+        visibleCount + ' de ' + TOTAL + ' políticos';
+      document.getElementById('no-results').style.display =
+        visibleCount === 0 ? 'block' : 'none';
+    }
+
+    function clearFilters() {
+      document.getElementById('search').value = '';
+      document.getElementById('filter-party').value = '';
+      document.getElementById('filter-cargo').value = '';
+      applyFilters();
+    }
+  </script>
 </body>
 </html>
