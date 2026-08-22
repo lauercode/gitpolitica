@@ -40,7 +40,7 @@ jobs:
           python-version: "3.12"
 
       - name: Sincroniza deputados/senadores (só na run diária)
-        if: github.event.schedule == '0 3 * * *'
+        if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
         run: python3 sync_politicians.py
         env:
           GITPOLITICA_REPO_DIR: data/repo
