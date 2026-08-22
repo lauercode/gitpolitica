@@ -103,9 +103,7 @@ def load_politicians() -> list[dict]:
 POLITICIANS = load_politicians()
 
 # Fontes de notícias (RSS).
-#
-# As duas abaixo foram testadas e confirmadas nesta sessão — o XML foi
-# buscado ao vivo e contém notícias reais e recentes:
+
 RSS_SOURCES = [
     {
         "name": "Agência Brasil - Política",
@@ -115,25 +113,12 @@ RSS_SOURCES = [
         "name": "Agência Câmara - Política",
         "url": "https://www.camara.leg.br/noticias/rss/dinamico/POLITICA",
     },
+    {
+        "name": "G1 - Política:",
+        "url": "https://g1.globo.com/dynamo/politica/rss2.xml",
+    },
+    {
+        "name": "Folha de S.Paulo - Em cima da hora",
+        "url": "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
+    },
 ]
-
-# Candidatas que NÃO puderam ser confirmadas nesta sessão (o ambiente que
-# gerou este projeto não tem acesso à internet para testar fetches
-# arbitrários, e g1.globo.com/feeds.folha.uol.com.br bloquearam o acesso
-# direto da ferramenta de busca usada). São padrões de URL conhecidos e
-# amplamente referenciados, mas teste antes de usar em produção — pode
-# ser que tenham mudado:
-#
-#   G1 - Política:
-#     https://g1.globo.com/dynamo/politica/rss2.xml
-#   Folha de S.Paulo - Em cima da hora (geral, não é só política):
-#     https://feeds.folha.uol.com.br/emcimadahora/rss091.xml
-#
-# Não foi encontrada uma URL de RSS atual e confiável para o Congresso em
-# Foco nesta sessão — o site não expõe um link de feed óbvio na home nem
-# em buscas. Se você usa o site e sabe a URL, pode adicioná-la abaixo.
-#
-# Dica: a cobertura de "Agência Câmara" e "Agência Brasil" já cobre boa
-# parte do noticiário do Senado também (matérias frequentemente citam
-# "com informações da Agência Senado"), então mesmo sem uma fonte
-# dedicada ao Senado a cobertura fica razoavelmente completa.
