@@ -1,27 +1,44 @@
 """
 disambiguation.py — resolve menções ambíguas (aliases/sobrenomes
 compartilhados por mais de um político monitorado) usando o contexto
-ao redor da menção no texto.
+ao redor da menção no texto, e descarta menções de sobrenome que na
+verdade pertencem a uma pessoa NÃO monitorada.
 
-O problema: com sobrenomes curtos habilitados como alias (ver
-camara_api.py e senado_api.py), é comum que mais de um político
-monitorado compartilhe o mesmo sobrenome — o caso real que motivou
-este módulo é "Bolsonaro", que hoje corresponde tanto a Jair Bolsonaro
-(ex-presidente) quanto a Flávio Bolsonaro (senador pelo RJ).
+Dois problemas relacionados, resolvidos aqui:
 
-A solução: quando uma menção casa com mais de um político, olhamos
-para uma janela de texto ao redor da menção (a mesma frase,
-tipicamente) procurando pistas — palavras do cargo ("senador",
-"deputado", "ex-presidente", "ministro", "governador") e a UF
-mencionada perto do nome (ex.: "(RJ)"). O partido (sigla) NÃO é usado
-como pista por padrão, porque é comum político da mesma família estar
-no mesmo partido (como no caso Bolsonaro/Bolsonaro), o que tornaria a
-pista inútil ou até enganosa nesses casos.
+1. AMBIGUIDADE ENTRE POLÍTICOS MONITORADOS: com sobrenomes curtos
+   habilitados como alias (ver camara_api.py e senado_api.py), é comum
+   que mais de um político monitorado compartilhe o mesmo sobrenome —
+   o caso que motivou esse mecanismo é "Bolsonaro", que corresponde
+   tanto a Jair Bolsonaro (ex-presidente) quanto a Flávio Bolsonaro
+   (senador pelo RJ). Resolvido por score_context()/resolve_ambiguous_mention(),
+   usando pistas de cargo e UF no texto ao redor da menção.
 
-Em caso de empate ou nenhuma pista encontrada, a função não resolve
-(retorna None) — o princípio aqui é priorizar precisão sobre
-cobertura: melhor deixar uma menção ambígua sem commit do que atribuí-
-la ao político errado.
+2. SOBRENOME DE UMA PESSOA NÃO MONITORADA: um problema mais sério,
+   encontrado com dados reais em produção — a notícia "Confira a
+   agenda dos candidatos à Presidência" cita "Edmilson Costa (PCB)",
+   um candidato presidencial que NÃO tem nada a ver com Humberto Costa
+   (senador monitorado), mas como "Costa" é alias dele, o sistema
+   atribuiu a menção errada. Isso acontece mesmo sem ambiguidade entre
+   políticos monitorados (só existe 1 "Costa" na nossa lista) — o
+   problema é a palavra bater com o sobrenome de uma pessoa qualquer.
+
+   A defesa: check_preceding_name() olha a palavra imediatamente
+   ANTES da menção. Se houver um nome capitalizado ali (formando um
+   nome completo tipo "Edmilson Costa") que não é o primeiro nome de
+   nenhum dos candidatos monitorados que compartilham esse alias, a
+   menção é descartada — é sobrenome de outra pessoa. Se o nome
+   anterior bater com o primeiro nome de UM dos candidatos, isso na
+   verdade é um sinal forte e resolve a ambiguidade direto pra ele
+   (por exemplo, "Jair Bolsonaro" perto de "Flávio Bolsonaro" no mesmo
+   texto: cada ocorrência de "Bolsonaro" é resolvida individualmente
+   pelo nome que a precede).
+
+Em qualquer caso de dúvida (nenhuma pista, pistas empatadas, ou nome
+anterior que não bate com ninguém monitorado), a função não resolve
+(retorna None) — o princípio aqui é sempre priorizar precisão sobre
+cobertura: melhor deixar uma menção sem commit do que atribuí-la à
+pessoa errada.
 """
 
 import re
@@ -44,6 +61,7 @@ _ROLE_KEYWORDS = [
 ]
 
 _UF_PATTERN = re.compile(r"\(([A-Z]{2})\)")
+_PRECEDING_NAME_PATTERN = re.compile(r"([A-ZÀ-Ý][a-zà-ÿ]+)\s*$")
 
 
 def _role_keywords_in(text_norm: str) -> set[str]:
@@ -58,6 +76,41 @@ def _role_keywords_of_politician(politician: dict) -> set[str]:
 def _uf_of_politician(politician: dict) -> str | None:
     match = _UF_PATTERN.search(politician.get("role", ""))
     return match.group(1) if match else None
+
+
+def _first_name_of(politician: dict) -> str:
+    tokens = politician["name"].strip().split()
+    return normalize(tokens[0]) if tokens else ""
+
+
+def check_preceding_name(
+    text: str, match_start: int, candidates: list[dict]
+) -> tuple[bool, dict | None]:
+    """
+    Olha a palavra capitalizada imediatamente antes de match_start (se
+    houver). Retorna (deve_descartar, resolvido_diretamente):
+
+    - Sem palavra capitalizada antes (ou início do texto): (False, None)
+      — nada a decidir aqui, segue para as outras checagens.
+    - Palavra anterior bate com o primeiro nome de exatamente 1
+      candidato: (False, esse_candidato) — resolve direto, sinal forte.
+    - Palavra anterior bate com o primeiro nome de 2+ candidatos (raro):
+      (False, None) — ainda ambíguo, segue para outras checagens.
+    - Palavra anterior NÃO bate com o primeiro nome de nenhum
+      candidato: (True, None) — descarta, é sobrenome de outra pessoa.
+    """
+    preceding_match = _PRECEDING_NAME_PATTERN.search(text[:match_start])
+    if not preceding_match:
+        return False, None
+
+    preceding_norm = normalize(preceding_match.group(1))
+    matching = [p for p in candidates if _first_name_of(p) == preceding_norm]
+
+    if len(matching) == 1:
+        return False, matching[0]
+    if len(matching) == 0:
+        return True, None
+    return False, None  # 2+ bateram (raríssimo) — deixa pras outras checagens
 
 
 def score_context(politician: dict, context_text: str) -> int:
@@ -92,6 +145,9 @@ def resolve_ambiguous_mention(
     (ambígua) e o texto de contexto ao redor dela. Retorna o político
     mais provável, ou None se não for possível decidir com confiança
     (nenhuma pista, ou pistas empatadas entre dois ou mais candidatos).
+
+    Não faz a checagem de nome precedente — isso é responsabilidade de
+    resolve_mention(), que chama esta função só como uma das etapas.
     """
     if len(candidates) == 1:
         return candidates[0]
@@ -111,6 +167,23 @@ def resolve_ambiguous_mention(
     return best_politician
 
 
+def resolve_mention(
+    candidates: list[dict], text: str, match_start: int, context_text: str
+) -> dict | None:
+    """
+    Ponto de entrada único usado por matcher.py: combina a checagem de
+    nome precedente (prioridade máxima — pode descartar mesmo com 1
+    candidato só) com a desambiguação por cargo/UF.
+    """
+    should_discard, resolved_directly = check_preceding_name(text, match_start, candidates)
+    if should_discard:
+        return None
+    if resolved_directly:
+        return resolved_directly
+
+    return resolve_ambiguous_mention(candidates, context_text)
+
+
 if __name__ == "__main__":
     jair = {
         "slug": "jair-bolsonaro",
@@ -124,15 +197,38 @@ if __name__ == "__main__":
         "role": "Senador(a) (RJ)",
         "party": "PL",
     }
-    candidates = [jair, flavio]
+    humberto_costa = {
+        "slug": "humberto-costa",
+        "name": "Humberto Costa",
+        "role": "Senador(a) (PE)",
+        "party": "PT",
+    }
 
+    print("--- Ambiguidade entre políticos monitorados (Bolsonaro/Bolsonaro) ---")
+    candidates = [jair, flavio]
     cases = [
         "O ex-presidente Bolsonaro comentou o julgamento em entrevista",
         "O senador Bolsonaro criticou a proposta em discurso no plenário",
-        "A senadora por RJ, Bolsonaro, defendeu o projeto",
         "Bolsonaro se reuniu com aliados nesta tarde",  # sem pista -> None
+        "Jair Bolsonaro e Flávio Bolsonaro discutiram nos bastidores",
     ]
     for text in cases:
-        resolved = resolve_ambiguous_mention(candidates, text)
+        for match in re.finditer(r"Bolsonaro", text):
+            context = text[max(0, match.start() - 80): match.end() + 80]
+            resolved = resolve_mention(candidates, text, match.start(), context)
+            slug = resolved["slug"] if resolved else None
+            print(f"{text!r} [pos {match.start()}] -> {slug}")
+
+    print("\n--- Sobrenome de pessoa não monitorada (Costa/Costa) ---")
+    candidates = [humberto_costa]
+    cases = [
+        "Humberto Costa vota a favor do projeto de lei",
+        "Costa vota a favor do projeto de lei",  # sem nome antes -> ok
+        "Edmilson Costa (PCB) participa de entrevista",  # pessoa diferente -> None
+    ]
+    for text in cases:
+        match = re.search(r"Costa", text)
+        context = text[max(0, match.start() - 80): match.end() + 80]
+        resolved = resolve_mention(candidates, text, match.start(), context)
         slug = resolved["slug"] if resolved else None
         print(f"{text!r} -> {slug}")

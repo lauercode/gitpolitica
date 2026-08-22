@@ -17,14 +17,20 @@ Três camadas, combinadas por padrão:
    perderia — erros de digitação, nomes sem acento, abreviações
    próximas — sem precisar listar manualmente cada variação.
 
-3. DESAMBIGUAÇÃO (disambiguation.py): tanto a camada exata quanto a
-   fuzzy podem encontrar mais de um político para a mesma menção — por
-   exemplo, "Bolsonaro" corresponde tanto a Jair Bolsonaro quanto a
-   Flávio Bolsonaro, já que ambos têm esse sobrenome cadastrado como
-   alias (veja camara_api.py/senado_api.py, que adicionam o sobrenome
-   automaticamente). Quando isso acontece, olhamos para o texto ao
-   redor da menção em busca de pistas de cargo/UF para decidir. Sem
-   pista clara, a menção é descartada (precisão > cobertura).
+3. DESAMBIGUAÇÃO (disambiguation.py): usada sempre que o alias/
+   candidato encontrado é de UMA PALAVRA SÓ (sobrenome ou apelido) —
+   nunca para aliases de nome completo, porque aí a checagem de "nome
+   que precede a menção" geraria falso negativo (ex.: "Ontem, Arthur
+   Lira se reuniu..." tem "Ontem" antes de "Arthur", o que não deveria
+   descartar um nome completo já inequívoco). Para aliases de uma
+   palavra, duas coisas são checadas: (a) se o nome logo antes da
+   menção não bate com o primeiro nome de nenhum político candidato,
+   a menção é descartada — é sobrenome de outra pessoa (ex.: "Edmilson
+   Costa" não deve virar Humberto Costa); (b) se mais de um político
+   monitorado compartilha o mesmo sobrenome (ex.: "Bolsonaro" ->
+   Jair Bolsonaro e Flávio Bolsonaro), pistas de cargo/UF no texto ao
+   redor decidem. Sem pista clara em qualquer uma das checagens, a
+   menção é descartada (precisão > cobertura).
 
 find_mentioned_politicians() combina as três camadas e é o que o resto
 do pipeline usa.
@@ -39,7 +45,7 @@ import re
 import difflib
 from config import POLITICIANS
 from text_utils import normalize
-from disambiguation import resolve_ambiguous_mention
+from disambiguation import resolve_ambiguous_mention, resolve_mention
 
 _CONTEXT_RADIUS = 80  # caracteres de contexto para cada lado da menção
 
@@ -48,8 +54,21 @@ def _context_window(text: str, start: int, end: int) -> str:
     return text[max(0, start - _CONTEXT_RADIUS): end + _CONTEXT_RADIUS]
 
 
-def _resolve(candidates: list[dict], context_text: str) -> dict | None:
-    """Atalho: 1 candidato -> direto; 2+ -> desambigua por contexto."""
+def _resolve(
+    candidates: list[dict],
+    text: str,
+    match_start: int,
+    context_text: str,
+    is_single_word: bool,
+) -> dict | None:
+    """
+    Atalho de resolução. Para aliases/candidatos de uma palavra só,
+    passa pela checagem de nome precedente (que pode descartar mesmo
+    com 1 candidato). Para nomes completos, não — só desambigua entre
+    monitorados quando há mais de um candidato.
+    """
+    if is_single_word:
+        return resolve_mention(candidates, text, match_start, context_text)
     if len(candidates) == 1:
         return candidates[0]
     return resolve_ambiguous_mention(candidates, context_text)
@@ -81,8 +100,15 @@ def find_mentioned_exact(text: str) -> list[dict]:
     """Casamento exato por alias, com desambiguação por contexto quando necessário."""
     mentioned = {}
     for alias, candidates in _ALIAS_INDEX.items():
+        is_single_word = " " not in alias
         for match in _ALIAS_PATTERNS[alias].finditer(text):
-            resolved = _resolve(candidates, _context_window(text, match.start(), match.end()))
+            resolved = _resolve(
+                candidates,
+                text,
+                match.start(),
+                _context_window(text, match.start(), match.end()),
+                is_single_word,
+            )
             if resolved:
                 mentioned[resolved["slug"]] = resolved
     return list(mentioned.values())
@@ -151,7 +177,11 @@ def find_mentioned_fuzzy(text: str) -> list[dict]:
 
         tied_candidates = [p for score, p in scores if score >= best_score - _TIE_EPSILON]
         resolved = _resolve(
-            tied_candidates, _context_window(text, match.start(), match.end())
+            tied_candidates,
+            text,
+            match.start(),
+            _context_window(text, match.start(), match.end()),
+            is_single_word,
         )
         if resolved:
             mentioned[resolved["slug"]] = resolved
@@ -187,6 +217,11 @@ if __name__ == "__main__":
         "Governo Federal libera novos recursos para saúde",
         "Estados Unidos anunciam nova tarifa de importação",
         "Supremo Tribunal Federal julga ação sobre o tema",
+        # nome completo no início de frase, precedido de palavra
+        # capitalizada não relacionada — não deve ser descartado
+        "Ontem, Arthur Lira se reuniu com líderes partidários",
+        # sobrenome de pessoa NÃO monitorada — não deve casar
+        "Edmilson Costa (PCB) concede entrevista à imprensa",
     ]
     for s in samples:
         found = find_mentioned_politicians(s)

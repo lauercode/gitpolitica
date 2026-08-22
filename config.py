@@ -4,13 +4,23 @@ Configuração do GitPolítica MVP.
 POLITICIANS combina três fontes:
   1. MANUAL_POLITICIANS — cargos que não vêm de nenhuma API do Congresso
      (Presidente, ministros do STF, governadores, etc.), mantidos à mão.
-  2. data/politicians_camara.json — deputados, gerado por
+  2. <REPO_DIR>/_meta/politicians_camara.json — deputados, gerado por
      sync_politicians.py a partir da API da Câmara.
-  3. data/politicians_senado.json — senadores, gerado por
+  3. <REPO_DIR>/_meta/politicians_senado.json — senadores, gerado por
      sync_politicians.py a partir da API do Senado.
 
 Se os arquivos gerados não existirem ainda (sync nunca rodou), o
 sistema funciona só com a lista manual.
+
+IMPORTANTE: os arquivos gerados moram DENTRO de REPO_DIR (o
+repositório de dados), não num caminho separado no repositório de
+código. Isso é proposital — REPO_DIR é o único lugar que de fato
+persiste entre execuções em produção (é ele que é clonado do GitHub a
+cada run e recebe um `git push` no final). Um caminho fora dele seria
+recriado do zero a cada execução do CI e a lista sincronizada se
+perderia silenciosamente em toda run que não chamasse
+sync_politicians.py — foi exatamente esse bug que motivou essa
+reestruturação (ver README, seção "Bug de persistência").
 
 Em caso de conflito de slug, a prioridade é: manual > Câmara > Senado
 (por exemplo, um deputado que também aparece de alguma forma na lista
@@ -20,9 +30,15 @@ do Senado mantém a versão da Câmara).
 import json
 import os
 
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-_CAMARA_PATH = os.path.join(_BASE_DIR, "data", "politicians_camara.json")
-_SENADO_PATH = os.path.join(_BASE_DIR, "data", "politicians_senado.json")
+# Podem ser sobrescritos por variável de ambiente — útil em CI, onde o
+# repositório de dados é clonado num caminho específico pelo
+# actions/checkout (veja .github/workflows/update.yml).
+REPO_DIR = os.environ.get("GITPOLITICA_REPO_DIR", "data/repo")
+SITE_DIR = os.environ.get("GITPOLITICA_SITE_DIR", "data/site")
+
+# Ver docstring do módulo: precisam morar dentro de REPO_DIR.
+_CAMARA_PATH = os.path.join(REPO_DIR, "_meta", "politicians_camara.json")
+_SENADO_PATH = os.path.join(REPO_DIR, "_meta", "politicians_senado.json")
 
 MANUAL_POLITICIANS = [
     {
@@ -121,9 +137,3 @@ RSS_SOURCES = [
 # parte do noticiário do Senado também (matérias frequentemente citam
 # "com informações da Agência Senado"), então mesmo sem uma fonte
 # dedicada ao Senado a cobertura fica razoavelmente completa.
-
-# Podem ser sobrescritos por variável de ambiente — útil em CI, onde o
-# repositório de dados é clonado num caminho específico pelo
-# actions/checkout (veja .github/workflows/update.yml).
-REPO_DIR = os.environ.get("GITPOLITICA_REPO_DIR", "data/repo")
-SITE_DIR = os.environ.get("GITPOLITICA_SITE_DIR", "data/site")
