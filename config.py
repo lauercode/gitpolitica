@@ -121,4 +121,24 @@ RSS_SOURCES = [
         "name": "Folha de S.Paulo - Em cima da hora",
         "url": "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
     },
+    {
+        "name": "Gazeta do Povo - República",
+        "url": "https://www.gazetadopovo.com.br/feed/rss/republica.xml",
+    },
+    {
+        "name": "Gazeta do Povo - Congresso Nacional",
+        "url": "https://www.gazetadopovo.com.br/feed/rss/tudo-sobre/congresso-nacional.xml",
+    },
+    {
+        "name": "Gazeta do Povo - Governo Federal",
+        "url": "https://www.gazetadopovo.com.br/feed/rss/tudo-sobre/governo-federal.xml",
+    },
+    {
+        "name": "BBC Brasil - Primeira Página",
+        "url": "http://www.bbc.co.uk/portuguese/index.xml",
+    },
+    {
+        "name": "BBC Brasil - Brasil",
+        "url": "http://www.bbc.co.uk/portuguese/topicos/brasil/index.xml",
+    },
 ]
