@@ -29,3 +29,32 @@ def extract_surname(full_name: str) -> str:
     """
     tokens = full_name.strip().split()
     return tokens[-1] if tokens else full_name
+
+
+# Nomes de urna no padrão "Título/Patente + Primeiro Nome" são comuns
+# no Brasil (candidatos ligados à segurança pública, forças armadas ou
+# religião costumam usar isso para se identificar no voto). Nesse
+# padrão, extract_surname() erra: o "último token" na verdade é um
+# primeiro nome comum (ex: "Coronel Fernanda" -> "Fernanda"), não um
+# sobrenome de verdade — e "Fernanda" sozinho colide com qualquer
+# pessoa não-política de primeiro nome igual (ex: atrizes Fernanda
+# Montenegro, Maria Fernanda Cândido). Bug real encontrado em produção.
+_PREFIXOS_TITULO_PATENTE = {
+    "coronel", "capitao", "sargento", "delegado", "delegada", "major",
+    "tenente", "cabo", "soldado", "doutor", "doutora", "professor",
+    "professora", "pastor", "pastora", "padre", "policial", "juiz",
+    "juiza", "promotor", "promotora", "advogado", "advogada",
+}
+
+
+def has_title_prefix(full_name: str) -> bool:
+    """
+    True se o primeiro token do nome for um título/patente conhecido —
+    sinal de que extract_surname() não deve ser usado para gerar um
+    alias automático (o resultado seria um primeiro nome comum, não um
+    sobrenome distintivo).
+    """
+    tokens = full_name.strip().split()
+    if not tokens:
+        return False
+    return normalize(tokens[0]) in _PREFIXOS_TITULO_PATENTE

@@ -190,6 +190,18 @@ def find_mentioned_fuzzy(text: str) -> list[dict]:
     nome completo de duas palavras e gerar falso positivo com
     sobrenomes ambíguos. Quando o candidato empata entre dois ou mais
     políticos, usa o contexto ao redor para decidir (ou descarta).
+
+    IMPORTANTE: candidatos de UMA PALAVRA SÓ são pulados aqui de
+    propósito (só a camada exata cuida deles). Bug real encontrado em
+    produção: com a base do TSE (~40 mil sobrenomes), "Cores" (a
+    palavra comum "cores", não um nome) bateu 0.909 de similaridade com
+    "Côrtes" (sobrenome do deputado Altineu Côrtes) — passando por
+    pouco do limiar de 0.90. Em pequena escala isso quase nunca
+    acontece; em ~40 mil sobrenomes, é praticamente garantido que
+    aconteça de novo com outras palavras comuns. Como a camada exata já
+    cobre virtualmente todo sobrenome real registrado nessa escala, o
+    valor de tolerar erro de digitação em menções de uma palavra só não
+    compensa mais esse risco.
     """
     mentioned = {}
 
@@ -197,14 +209,15 @@ def find_mentioned_fuzzy(text: str) -> list[dict]:
         candidate = match.group(0)
         candidate_norm = normalize(candidate)
         is_single_word = " " not in candidate_norm
-        threshold = _THRESHOLD_SINGLE_WORD if is_single_word else _THRESHOLD_MULTI_WORD
+        if is_single_word:
+            continue  # só a camada exata trata menções de 1 palavra
 
         scores_by_slug = _best_scores_by_politician(candidate_norm, is_single_word)
         if not scores_by_slug:
             continue
 
         best_score = max(score for score, _ in scores_by_slug.values())
-        if best_score < threshold:
+        if best_score < _THRESHOLD_MULTI_WORD:
             continue
 
         tied_candidates = [

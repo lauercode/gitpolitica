@@ -34,7 +34,7 @@ import re
 import urllib.request
 import zipfile
 
-from text_utils import extract_surname
+from text_utils import extract_surname, has_title_prefix
 
 CANDIDATOS_ZIP_URL = (
     "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip"
@@ -182,7 +182,7 @@ def to_politician_dict(row: dict) -> dict:
     if nome_civil and nome_civil != nome:
         aliases.add(nome_civil)
     surname = extract_surname(nome)
-    if surname != nome and len(surname) > 3:
+    if surname != nome and len(surname) > 3 and not has_title_prefix(nome):
         aliases.add(surname)
 
     slug_base = re.sub(r"[^a-z0-9]+", "-", nome.lower()).strip("-")

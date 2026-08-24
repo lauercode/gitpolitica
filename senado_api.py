@@ -15,7 +15,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 from camara_api import slugify  # reaproveita a mesma função de slug
-from text_utils import extract_surname
+from text_utils import extract_surname, has_title_prefix
 
 API_URL = "https://legis.senado.leg.br/dadosabertos/senador/lista/atual"
 
@@ -58,7 +58,7 @@ def to_politician_dict(record: dict) -> dict:
     uf = record.get("siglaUf", "")
     surname = extract_surname(name)
     aliases = [name]
-    if surname != name and len(surname) > 3:
+    if surname != name and len(surname) > 3 and not has_title_prefix(name):
         aliases.append(surname)
     return {
         "slug": slugify(name),
