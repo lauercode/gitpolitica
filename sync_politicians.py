@@ -1,9 +1,10 @@
 """
-sync_politicians.py — busca a lista completa de deputados e senadores
-nas respectivas APIs e salva DENTRO do repositório de dados
-(config.REPO_DIR), commitando o resultado ali. config.py lê esses
-arquivos automaticamente (se existirem) e mescla com a lista manual de
-cargos "especiais" (Presidente, Ministros, Governadores).
+sync_politicians.py — busca a lista completa de deputados, senadores e
+candidatos à eleição de 2026 (TSE) nas respectivas fontes e salva
+DENTRO do repositório de dados (config.REPO_DIR), commitando o
+resultado ali. config.py lê esses arquivos automaticamente (se
+existirem) e mescla com a lista manual de cargos "especiais"
+(Presidente, Ministros, Governadores).
 
 IMPORTANTE: esses arquivos moram dentro de REPO_DIR de propósito — é o
 único lugar que persiste de fato entre execuções em produção (checkout
@@ -12,9 +13,15 @@ execução do CI, e a lista sincronizada se perderia silenciosamente em
 toda run que não chamasse este script — foi exatamente esse bug que
 motivou esta versão (ver README).
 
+⚠️ O sync do TSE baixa e processa um arquivo BEM maior que o da
+Câmara/Senado (dezenas de milhares de candidatos em vez de ~600
+pessoas) — pode demorar mais nesta etapa. Use --skip-tse para pular
+essa parte em testes locais rápidos.
+
 Uso:
-    python3 sync_politicians.py            # produção, busca das APIs reais
-    python3 sync_politicians.py --sample   # offline, usa os arquivos de amostra
+    python3 sync_politicians.py               # produção, busca das fontes reais
+    python3 sync_politicians.py --sample      # offline, usa os arquivos de amostra
+    python3 sync_politicians.py --skip-tse    # pula o sync do TSE (mais rápido)
 """
 
 import json
@@ -23,7 +30,8 @@ import sys
 
 import camara_api
 import senado_api
-from config import _CAMARA_PATH, _SENADO_PATH
+import tse_api
+from config import _CAMARA_PATH, _SENADO_PATH, _TSE_PATH
 from repo_writer import ensure_repo, _run_git
 
 
@@ -65,6 +73,20 @@ def sync_senado(use_sample: bool) -> None:
     _save(politicians, _SENADO_PATH, "senadores(as)")
 
 
+def sync_tse(use_sample: bool, local_zip_path: str | None = None) -> None:
+    if use_sample:
+        print("[modo teste] TSE: usando sample_tse_candidatos.csv (offline)")
+        import csv
+        with open("sample_tse_candidatos.csv", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            records = tse_api.parse_candidatos_csv(reader)
+        politicians = tse_api.build_politicians_list(records)
+    else:
+        politicians = tse_api.fetch_and_build(local_zip_path=local_zip_path)
+
+    _save(politicians, _TSE_PATH, "candidatos (eleição 2026)")
+
+
 def _commit_meta_files(repo_dir: str) -> None:
     """
     Commita os JSONs gerados dentro do repositório de dados. Não faz
@@ -79,13 +101,17 @@ def _commit_meta_files(repo_dir: str) -> None:
         return
 
     _run_git(
-        ["commit", "-q", "-m", "chore: sincroniza lista de deputados/senadores"],
+        ["commit", "-q", "-m", "chore: sincroniza lista de deputados/senadores/candidatos"],
         cwd=repo_dir,
     )
     print("Commit da lista sincronizada criado.")
 
 
-def run(use_sample: bool = False) -> None:
+def run(
+    use_sample: bool = False,
+    skip_tse: bool = False,
+    tse_local_zip: str | None = None,
+) -> None:
     from config import REPO_DIR
 
     ensure_repo(REPO_DIR)
@@ -94,8 +120,23 @@ def run(use_sample: bool = False) -> None:
     print()
     sync_senado(use_sample)
     print()
+    if not skip_tse:
+        sync_tse(use_sample, local_zip_path=tse_local_zip)
+        print()
     _commit_meta_files(REPO_DIR)
 
 
+def _get_arg_value(flag: str) -> str | None:
+    """Extrai o valor de uma flag no formato --flag=valor de sys.argv."""
+    for arg in sys.argv:
+        if arg.startswith(f"{flag}="):
+            return arg.split("=", 1)[1]
+    return None
+
+
 if __name__ == "__main__":
-    run(use_sample="--sample" in sys.argv)
+    run(
+        use_sample="--sample" in sys.argv,
+        skip_tse="--skip-tse" in sys.argv,
+        tse_local_zip=_get_arg_value("--tse-arquivo-local"),
+    )

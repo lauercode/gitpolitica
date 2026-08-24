@@ -135,12 +135,51 @@ def extract_candidate_names(text: str) -> list[str]:
     return _CANDIDATE_PATTERN.findall(text)
 
 
-def _best_ratio(candidate_norm: str, targets: list[str]) -> float:
-    best = 0.0
-    for target in targets:
-        ratio = difflib.SequenceMatcher(None, candidate_norm, normalize(target)).ratio()
-        best = max(best, ratio)
-    return best
+# --- Índice por prefixo (necessário em escala: com o dataset de
+# candidatos do TSE, POLITICIANS pode ter dezenas de milhares de
+# entradas — comparar cada candidato do texto contra a lista inteira
+# via difflib ficaria lento demais, ~1s por candidato com 40 mil
+# políticos, medido e confirmado antes desta otimização). A ideia:
+# comparar só contra quem começa com a mesma letra (normalizada, sem
+# acento) que o candidato. Isso cobre a esmagadora maioria dos casos
+# reais de erro de digitação (a primeira letra quase nunca muda), ao
+# custo de não pegar um typo bem no início do nome — uma troca
+# aceitável, já validada com os testes de regressão existentes.
+
+def _build_fuzzy_index(use_aliases_only: bool) -> dict[str, list[tuple[str, dict]]]:
+    index: dict[str, list[tuple[str, dict]]] = {}
+    for politician in POLITICIANS:
+        targets = politician["aliases"] if use_aliases_only else (
+            [politician["name"]] + politician["aliases"]
+        )
+        for target in targets:
+            norm = normalize(target)
+            if not norm:
+                continue
+            index.setdefault(norm[0], []).append((norm, politician))
+    return index
+
+
+_FUZZY_INDEX_SINGLE_WORD = _build_fuzzy_index(use_aliases_only=True)
+_FUZZY_INDEX_MULTI_WORD = _build_fuzzy_index(use_aliases_only=False)
+
+
+def _best_scores_by_politician(
+    candidate_norm: str, is_single_word: bool
+) -> dict[str, tuple[float, dict]]:
+    """Retorna, por slug, o melhor score encontrado no bucket de prefixo certo."""
+    if not candidate_norm:
+        return {}
+    index = _FUZZY_INDEX_SINGLE_WORD if is_single_word else _FUZZY_INDEX_MULTI_WORD
+    bucket = index.get(candidate_norm[0], [])
+
+    best_by_slug: dict[str, tuple[float, dict]] = {}
+    for norm_target, politician in bucket:
+        score = difflib.SequenceMatcher(None, candidate_norm, norm_target).ratio()
+        slug = politician["slug"]
+        if score > best_by_slug.get(slug, (0.0, None))[0]:
+            best_by_slug[slug] = (score, politician)
+    return best_by_slug
 
 
 def find_mentioned_fuzzy(text: str) -> list[dict]:
@@ -160,22 +199,17 @@ def find_mentioned_fuzzy(text: str) -> list[dict]:
         is_single_word = " " not in candidate_norm
         threshold = _THRESHOLD_SINGLE_WORD if is_single_word else _THRESHOLD_MULTI_WORD
 
-        scores = []
-        for politician in POLITICIANS:
-            targets = politician["aliases"] if is_single_word else (
-                [politician["name"]] + politician["aliases"]
-            )
-            score = _best_ratio(candidate_norm, targets)
-            scores.append((score, politician))
-
-        if not scores:
+        scores_by_slug = _best_scores_by_politician(candidate_norm, is_single_word)
+        if not scores_by_slug:
             continue
 
-        best_score = max(score for score, _ in scores)
+        best_score = max(score for score, _ in scores_by_slug.values())
         if best_score < threshold:
             continue
 
-        tied_candidates = [p for score, p in scores if score >= best_score - _TIE_EPSILON]
+        tied_candidates = [
+            p for score, p in scores_by_slug.values() if score >= best_score - _TIE_EPSILON
+        ]
         resolved = _resolve(
             tied_candidates,
             text,

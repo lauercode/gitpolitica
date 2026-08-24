@@ -47,6 +47,15 @@ def ensure_repo(repo_dir: str = REPO_DIR) -> None:
     subprocess.run(["git", "config", "user.name", "gitpolitica-bot"], cwd=repo_dir, check=True)
     subprocess.run(["git", "config", "user.email", "bot@gitpolitica.local"], cwd=repo_dir, check=True)
 
+    # Cria os arquivos que ainda não existem TODOS de uma vez, com um
+    # único `git add` + `git commit` no final — não um commit por
+    # político. Com a lista pequena (manual + Câmara + Senado, ~600),
+    # isso não fazia diferença perceptível; com o dataset de
+    # candidatos do TSE (dezenas de milhares), um commit por arquivo
+    # tornaria o sync inicial impraticavelmente lento (cada `git
+    # commit` sozinho já tem overhead de processo — multiplicado por
+    # dezenas de milhares, viraria horas em vez de segundos).
+    new_slugs = []
     for politician in POLITICIANS:
         filepath = os.path.join(repo_dir, f"{politician['slug']}.md")
         if not os.path.exists(filepath):
@@ -55,11 +64,23 @@ def ensure_repo(repo_dir: str = REPO_DIR) -> None:
                 f.write(f"- **Cargo**: {politician['role']}\n")
                 f.write(f"- **Partido**: {politician['party']}\n\n")
                 f.write("## Histórico\n\n")
-            _run_git(["add", f"{politician['slug']}.md"], cwd=repo_dir)
-            _run_git(
-                ["commit", "-q", "-m", f"init: cria arquivo de {politician['name']}"],
-                cwd=repo_dir,
-            )
+            new_slugs.append(politician["slug"])
+
+    if new_slugs:
+        # `git add` só dos arquivos novos (não `git add .`, que poderia
+        # varrer arquivos indesejados se algo mais estiver pendente no
+        # working tree). Em lotes de 500 pra não estourar o limite de
+        # tamanho da linha de comando com dezenas de milhares de nomes.
+        batch_size = 500
+        for i in range(0, len(new_slugs), batch_size):
+            batch = new_slugs[i:i + batch_size]
+            _run_git(["add"] + [f"{slug}.md" for slug in batch], cwd=repo_dir)
+
+        if len(new_slugs) == 1:
+            message = f"init: cria arquivo de {new_slugs[0]}"
+        else:
+            message = f"init: cria arquivo de {len(new_slugs)} políticos"
+        _run_git(["commit", "-q", "-m", message], cwd=repo_dir)
 
 
 def commit_news(

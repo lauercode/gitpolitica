@@ -1,13 +1,18 @@
 """
 Configuração do GitPolítica MVP.
 
-POLITICIANS combina três fontes:
+POLITICIANS combina quatro fontes:
   1. MANUAL_POLITICIANS — cargos que não vêm de nenhuma API do Congresso
      (Presidente, ministros do STF, governadores, etc.), mantidos à mão.
   2. <REPO_DIR>/_meta/politicians_camara.json — deputados, gerado por
      sync_politicians.py a partir da API da Câmara.
   3. <REPO_DIR>/_meta/politicians_senado.json — senadores, gerado por
      sync_politicians.py a partir da API do Senado.
+  4. <REPO_DIR>/_meta/politicians_tse.json — candidatos à eleição de
+     2026 (Presidente, Governador, Senador, Deputado Federal, Deputado
+     Estadual/Distrital), gerado a partir do dataset de Dados Abertos
+     do TSE. Esta fonte é MUITO maior que as outras três somadas
+     (dezenas de milhares de registros) — ver tse_api.py.
 
 Se os arquivos gerados não existirem ainda (sync nunca rodou), o
 sistema funciona só com a lista manual.
@@ -22,9 +27,11 @@ perderia silenciosamente em toda run que não chamasse
 sync_politicians.py — foi exatamente esse bug que motivou essa
 reestruturação (ver README, seção "Bug de persistência").
 
-Em caso de conflito de slug, a prioridade é: manual > Câmara > Senado
-(por exemplo, um deputado que também aparece de alguma forma na lista
-do Senado mantém a versão da Câmara).
+Em caso de conflito de slug, a prioridade é: manual > Câmara > Senado >
+TSE. Além disso, candidatos do TSE cujo NOME normalizado já bate com
+alguém das outras três fontes são descartados (é a mesma pessoa — um
+deputado em exercício concorrendo à reeleição, por exemplo — e ela já
+tem um perfil mais informativo nas fontes de mandato).
 """
 
 import json
@@ -39,6 +46,7 @@ SITE_DIR = os.environ.get("GITPOLITICA_SITE_DIR", "data/site")
 # Ver docstring do módulo: precisam morar dentro de REPO_DIR.
 _CAMARA_PATH = os.path.join(REPO_DIR, "_meta", "politicians_camara.json")
 _SENADO_PATH = os.path.join(REPO_DIR, "_meta", "politicians_senado.json")
+_TSE_PATH = os.path.join(REPO_DIR, "_meta", "politicians_tse.json")
 
 MANUAL_POLITICIANS = [
     {
@@ -87,7 +95,14 @@ def _load_json_list(path: str) -> list[dict]:
 
 
 def load_politicians() -> list[dict]:
-    """Mescla MANUAL_POLITICIANS + Câmara + Senado, nessa ordem de prioridade."""
+    """
+    Mescla MANUAL_POLITICIANS + Câmara + Senado + TSE, nessa ordem de
+    prioridade. Candidatos do TSE cujo nome já existe nas três
+    primeiras fontes são descartados (mesma pessoa, perfil de mandato
+    já existente é mais informativo que o de candidatura).
+    """
+    from text_utils import normalize
+
     merged = list(MANUAL_POLITICIANS)
     seen_slugs = {p["slug"] for p in merged}
 
@@ -97,13 +112,28 @@ def load_politicians() -> list[dict]:
                 merged.append(politician)
                 seen_slugs.add(politician["slug"])
 
+    # Nomes já cobertos por mandato (manual + Câmara + Senado), pra
+    # não duplicar quem está concorrendo à reeleição em 2026.
+    seen_names = {normalize(p["name"]) for p in merged}
+
+    for politician in _load_json_list(_TSE_PATH):
+        if politician["slug"] in seen_slugs:
+            continue
+        if normalize(politician["name"]) in seen_names:
+            continue
+        merged.append(politician)
+        seen_slugs.add(politician["slug"])
+        seen_names.add(normalize(politician["name"]))
+
     return merged
 
 
 POLITICIANS = load_politicians()
 
 # Fontes de notícias (RSS).
-
+#
+# As duas abaixo foram testadas e confirmadas nesta sessão — o XML foi
+# buscado ao vivo e contém notícias reais e recentes:
 RSS_SOURCES = [
     {
         "name": "Agência Brasil - Política",
@@ -112,7 +142,7 @@ RSS_SOURCES = [
     {
         "name": "Agência Câmara - Política",
         "url": "https://www.camara.leg.br/noticias/rss/dinamico/POLITICA",
-    },
+    },    
     {
         "name": "G1 - Política:",
         "url": "https://g1.globo.com/dynamo/politica/rss2.xml",
