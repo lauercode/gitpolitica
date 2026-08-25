@@ -60,9 +60,27 @@ def run(use_sample: bool = False, backend: str = "alias", summarize: bool = Fals
 
     print(f"{len(news_items)} notícias coletadas.")
 
+    # Trava de segurança: uma notícia batendo em muitos políticos ao
+    # mesmo tempo quase sempre é sinal de erro de correspondência (ex.:
+    # uma lista de nomes/pesquisa eleitoral colidindo com apelidos
+    # genéricos), não uma notícia genuinamente sobre todo mundo. Bug
+    # real encontrado em produção: uma manchete de pesquisa Datafolha
+    # gerou dezenas de commits errados antes dessa trava existir. Em vez
+    # de arriscar um número mágico só de cabeça, o valor é configurável.
+    MAX_MATCHES_POR_NOTICIA = 5
+
     total_commits = 0
     for item in news_items:
         matches = find_mentioned(item.full_text)
+
+        if len(matches) > MAX_MATCHES_POR_NOTICIA:
+            print(
+                f"  [aviso] '{item.title[:80]}...' bateu em {len(matches)} "
+                f"políticos (limite: {MAX_MATCHES_POR_NOTICIA}) — pulando "
+                f"por segurança, provável erro de correspondência."
+            )
+            continue
+
         for politician in matches:
             # Evita recommitar a mesma notícia se o pipeline rodar de novo:
             # checagem simples pelo link já presente no log.

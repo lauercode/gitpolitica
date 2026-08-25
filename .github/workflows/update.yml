@@ -14,6 +14,18 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch: {}
 
+# Impede execuções sobrepostas: se uma execução ainda estiver rodando
+# quando o próximo agendamento disparar, a nova fica na fila em vez de
+# rodar em paralelo. Bug real encontrado em produção: sem isso, uma
+# execução que travou processando um erro de correspondência (matcher
+# batendo em dezenas de políticos por engano) ficou rodando por mais de
+# 4 horas enquanto novas execuções continuavam empilhando a cada 30
+# min, todas tentando escrever no mesmo repositório de dados ao mesmo
+# tempo.
+concurrency:
+  group: gitpolitica-update
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -29,7 +41,7 @@ jobs:
         # DATA_REPO_TOKEN neste repositório de código.
         uses: actions/checkout@v4
         with:
-          repository: lauercode/gitpolitica-data
+          repository: SEU-USUARIO/gitpolitica-data
           token: ${{ secrets.DATA_REPO_TOKEN }}
           path: data/repo
           fetch-depth: 0
@@ -39,7 +51,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Sincroniza deputados/senadores (só na run diária)
+      - name: Sincroniza deputados/senadores (na run diária ou quando disparado manualmente)
         if: github.event.schedule == '0 3 * * *' || github.event_name == 'workflow_dispatch'
         run: python3 sync_politicians.py
         env:

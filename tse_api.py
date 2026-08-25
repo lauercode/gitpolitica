@@ -34,6 +34,7 @@ import re
 import urllib.request
 import zipfile
 
+from camara_api import slugify
 from text_utils import extract_surname, has_title_prefix
 
 CANDIDATOS_ZIP_URL = (
@@ -178,14 +179,34 @@ def to_politician_dict(row: dict) -> dict:
     uf = (row.get("SG_UE") or row.get("SG_UF") or "").strip()
     cargo = (row.get("DS_CARGO") or "").strip().title()
 
-    aliases = {nome}
+    aliases = set()
     if nome_civil and nome_civil != nome:
         aliases.add(nome_civil)
-    surname = extract_surname(nome)
-    if surname != nome and len(surname) > 3 and not has_title_prefix(nome):
-        aliases.add(surname)
 
-    slug_base = re.sub(r"[^a-z0-9]+", "-", nome.lower()).strip("-")
+    if " " in nome:
+        # Nome de urna com 2+ palavras: trata normalmente, incluindo o
+        # sobrenome como alias extra (quando não é um nome de urna com
+        # título/patente, que já sabemos que engana a heurística).
+        aliases.add(nome)
+        surname = extract_surname(nome)
+        if surname != nome and len(surname) > 3 and not has_title_prefix(nome):
+            aliases.add(surname)
+    # Nome de urna de UMA PALAVRA SÓ (ex: "Superman", "Duda", "Ana") não
+    # vira alias sozinho — bug real encontrado em produção: é comum
+    # candidatos registrarem um apelido curto e genérico como nome de
+    # urna pra chamar atenção na cadeira eleitoral, e numa base de ~40
+    # mil candidatos, sempre existe alguém assim cujo "nome inteiro" é
+    # uma palavra comum o bastante pra colidir com qualquer menção não
+    # relacionada em texto de notícia (ex.: "Ana" batendo dentro de
+    # "Ana Luiza", uma pessoa completamente diferente). O preço: esses
+    # candidatos só são encontrados pelo nome civil (se distinto do
+    # nome de urna) — não há solução geral sem uma lista de nomes
+    # comuns do português pra saber quais palavras são "seguras".
+
+    # Remove acentos antes de gerar o slug — bug real encontrado em
+    # produção: sem isso, nomes como "Marília" viravam slugs corrompidos
+    # como "mar-lia" (o acento virava só um hífen solto).
+    slug_base = slugify(nome)
 
     return {
         "slug": slug_base,

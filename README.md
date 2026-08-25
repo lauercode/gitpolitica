@@ -322,6 +322,340 @@ histórico de commits público também, basta configurar um remote
 `origin` em `data/repo` apontando pro seu repositório de dados no
 GitHub e adicionar `git -C data/repo push` no fim do cron.
 
+## Bugs reais encontrados em produção (e corrigidos)
+
+Estas três correções vieram de rodar o projeto de verdade no GitHub
+Actions e comparar o comportamento esperado com o observado — vale
+documentar o raciocínio, porque são o tipo de problema que só aparece
+com uso real, não em teste local com dados de amostra.
+
+### 1. Bug de persistência: lista de políticos "esquecida" a cada execução
+
+**Sintoma**: o site publicado só mostrava uma fração dos políticos
+(os "últimos buscados"), e o matcher parecia não reconhecer a maioria
+das ~600 pessoas monitoradas na maior parte do dia.
+
+**Causa raiz**: `sync_politicians.py` salvava os JSONs gerados
+(`politicians_camara.json`, `politicians_senado.json`) num caminho
+(`data/`) que faz parte do checkout do repositório de **código** — que
+é recriado do zero a cada execução do CI. Como o step de sync só roda
+1x por dia (o resto do dia só roda `main.py`), em 47 das 48 execuções
+diárias esses arquivos simplesmente não existiam, e `config.py` caía
+de volta pros ~5 políticos manuais — inclusive regenerando o site
+inteiro com essa lista reduzida a cada vez.
+
+**Correção**: os arquivos gerados agora moram dentro de `REPO_DIR`
+(`<repo-de-dados>/_meta/`) — o único lugar que de fato persiste entre
+execuções (é clonado + tem `git push` a cada run) — e `sync_politicians.py`
+agora também commita essas mudanças ali. Testado: rodar `main.py` numa
+execução separada, sem chamar `sync_politicians.py` antes, continua
+enxergando a lista completa.
+
+### 2. Falso positivo: sobrenome de uma pessoa não monitorada
+
+**Sintoma**: a notícia "Confira a agenda dos candidatos à Presidência"
+gerou commits em `glauber-braga.md` e `humberto-costa.md`, mas nenhum
+dos dois é citado nela.
+
+**Causa raiz**: o texto completo da notícia (RSS costuma trazer mais
+que só o título) cita, entre outros, o candidato presidencial
+**Edmilson Costa (PCB)** — uma pessoa sem nenhuma relação com Humberto
+Costa (senador monitorado), mas que compartilha o sobrenome. Como
+"Costa" foi adicionado como alias automático pro Humberto Costa (pra
+resolver um bug anterior, de menções só pelo sobrenome), o sistema
+capturou o "Costa" de "Edmilson Costa" e atribuiu errado — mesmo sem
+nenhuma ambiguidade entre políticos monitorados (só existe 1 "Costa"
+na lista).
+
+**Correção**: `disambiguation.py` agora checa a palavra imediatamente
+antes de qualquer menção de uma palavra só (sobrenome/apelido). Se essa
+palavra for um nome capitalizado que não bate com o primeiro nome de
+nenhum candidato monitorado, a menção é descartada — é sobrenome de
+outra pessoa. Essa checagem só se aplica a aliases de uma palavra só;
+nomes completos (ex.: "Arthur Lira") nunca são descartados por causa
+disso, senão frases como "Ontem, Arthur Lira se reuniu..." perderiam a
+menção só por causa da palavra "Ontem" antes.
+
+### 3. Bloqueio silencioso por User-Agent
+
+**Sintoma**: `main.py` sempre reportava "0 notícias coletadas", sem
+erro visível no workflow (✓ verde mesmo assim).
+
+**Causa raiz**: alguns servidores (comum em sites de governo) recusam
+o User-Agent padrão do `urllib` (`Python-urllib/3.x`), e a exceção era
+capturada silenciosamente por `fetch_all_feeds()`.
+
+**Correção**: `scraper.py` agora envia um User-Agent de navegador em
+toda requisição HTTP.
+
+## Candidatos à eleição de 2026 (TSE) e deputados estaduais
+
+### Candidatos 2026 — implementado
+
+`tse_api.py` integra o dataset "Candidatos - 2026" do Portal de Dados
+Abertos do TSE (`dadosabertos.tse.jus.br`) — não é uma API JSON/XML
+como Câmara/Senado, é um ZIP com um CSV de todos os candidatos
+registrados. Cobre Presidente, Governador, Senador, Deputado Federal e
+**Deputado Estadual/Distrital** — ou seja, mesmo sem uma integração
+dedicada às Assembleias Legislativas (veja abaixo), já dá pra cobrir
+quem está concorrendo a uma vaga de deputado estadual em 2026.
+
+Candidatos cujo nome já existe nas outras três fontes (por exemplo, um
+deputado em exercício concorrendo à reeleição) são automaticamente
+deduplicados — mantém-se o perfil de mandato, não um perfil duplicado
+de candidatura (testado).
+
+⚠️ Não pôde ser testado contra o arquivo real nesta sessão (sem acesso
+à internet no ambiente onde este projeto foi gerado) — o parser segue
+o layout de colunas documentado publicamente pelo TSE, estável há
+vários ciclos eleitorais, mas rode `python3 sync_politicians.py` no
+seu ambiente antes de confiar nele em produção. Se alguma coluna tiver
+mudado de nome, o erro vai apontar exatamente qual.
+
+```bash
+python3 sync_politicians.py               # inclui TSE por padrão
+python3 sync_politicians.py --skip-tse    # pula o TSE (mais rápido p/ testes locais)
+python3 sync_politicians.py --skip-camara --skip-senado  # só o TSE
+python3 sync_politicians.py --sample      # offline, com sample_tse_candidatos.csv
+python3 sync_politicians.py --tse-arquivo-local=caminho/para/consulta_cand_2026.zip
+```
+
+#### Se o download automático do TSE der erro 403
+
+Dois cenários distintos, encontrados os dois em produção nesta sessão:
+
+**Bloqueio local (a partir de qualquer computador/rede)**: o CDN do
+TSE (provavelmente Akamai ou Cloudflare) pode recusar requisições sem
+cabeçalhos de navegador. Um conjunto mais completo de headers já foi
+adicionado, mas sem garantia de que resolve sempre (fingerprinting de
+TLS não dá pra contornar só com cabeçalhos HTTP).
+
+**Bloqueio específico do GitHub Actions**: mesmo com o download
+funcionando localmente, rodar dentro do GitHub Actions pode continuar
+dando 403 — o CDN provavelmente bloqueia especificamente os IPs dos
+runners do GitHub (conhecidos publicamente, e um alvo comum de
+bloqueio por WAFs de sites de governo, independente de qualquer
+cabeçalho). Esse é o caso mais provável se funcionou no seu
+computador mas não no workflow.
+
+Em qualquer um dos dois casos, uma falha no TSE **não derruba mais o
+resto do sync** — Câmara e Senado continuam sendo sincronizados e
+commitados normalmente, com um aviso no log em vez de erro fatal
+(testado). Pra manter os dados do TSE atualizados apesar do bloqueio,
+duas opções:
+
+1. **Sincronizar o TSE só localmente, periodicamente**: baixe o zip
+   pelo navegador, rode
+   `python3 sync_politicians.py --tse-arquivo-local=caminho/do/arquivo.zip --skip-camara --skip-senado`
+   no seu computador, e dê `git push` no repositório de dados
+   manualmente (fora do GitHub Actions). O TSE muda pouco depois do
+   prazo de registro de candidaturas, então rodar isso uma vez por
+   semana (ou até só uma vez, pertinho da eleição) provavelmente basta.
+2. **Commitar o zip do TSE no repositório**: baixe o arquivo, suba ele
+   pro repositório de código (ex.: `tse_data/consulta_cand_2026.zip`),
+   e mude o step do workflow que roda `sync_politicians.py` para usar
+   `--tse-arquivo-local=tse_data/consulta_cand_2026.zip` em vez de
+   tentar baixar toda execução. Assim o download nunca roda dentro do
+   GitHub Actions.
+
+### Deputados estaduais EM EXERCÍCIO — plano, não implementação
+
+Diferente da Câmara/Senado, não existe uma API federal única para os
+deputados atualmente em mandato nas 27 Assembleias Legislativas — cada
+estado tem seu próprio site e (às vezes) seu próprio portal de dados
+abertos, sem padronização entre eles. Uma pesquisa real (não uma
+suposição) identificou:
+
+- 🟢 **Minas Gerais (ALMG)**: API REST moderna e documentada em
+  `dadosabertos.almg.gov.br/api/v2/` — o caso mais forte encontrado.
+- 🟡 **São Paulo (ALESP)**: portal de dados abertos confirmado, com
+  categoria "Deputados Estaduais", mas o formato exato ainda não foi
+  verificado.
+- 🟡 **Rio de Janeiro (ALERJ)**: tem Portal da Transparência robusto,
+  mas nenhuma API estruturada equivalente foi encontrada nesta
+  pesquisa.
+- ❌ Os outros 23 estados ainda não foram pesquisados.
+
+O plano completo (por que não tentar os 27 de uma vez, estratégia de
+fases, e o próximo passo concreto) está em
+[`plano-deputados-estaduais.md`](./plano-deputados-estaduais.md).
+
+## Performance em escala (por causa do TSE)
+
+O dataset de candidatos do TSE é MUITO maior que Câmara+Senado juntos
+(dezenas de milhares de registros, contra ~600) — isso expôs dois
+gargalos reais que precisaram de correção:
+
+1. **Criação de arquivos em lote**: `ensure_repo()` fazia um `git
+   commit` por político na primeira vez que via cada um. Medido: ~9.5ms
+   por commit — aceitável com 600 políticos, mas ~6 minutos só nisso
+   com 40.000. Corrigido para um único commit em lote (todos os
+   arquivos novos de uma vez) — o mesmo teste ficou em ~2.5 segundos.
+
+2. **Índice por prefixo no matcher fuzzy**: comparar cada candidato de
+   nome extraído de uma notícia contra a lista inteira de políticos
+   (via `difflib`) ficava em ~925ms por candidato com 40.000 políticos
+   sintéticos — um único run processando ~15 notícias (~8 candidatos
+   cada) levaria mais de 100 segundos só nessa etapa. Com um índice
+   que agrupa os alvos por primeira letra normalizada (sem acento) e
+   só compara dentro do mesmo grupo, o mesmo teste caiu pra ~5
+   segundos (~22x mais rápido). Contrapartida: um erro de digitação
+   bem na primeira letra do nome não seria pego por essa camada — uma
+   troca aceitável dado o ganho de performance, e a camada exata
+   continua funcionando normalmente independente disso.
+
+Ambas as otimizações foram medidas com benchmarks reais neste
+ambiente (não são estimativas) — os números exatos estão nos testes
+que geraram esta seção.
+
+### 4. TSE: só o primeiro estado do zip era processado
+
+**Sintoma**: o sync do TSE completava sem erro, mas retornava só 558
+candidatos — bem abaixo do esperado (dezenas de milhares, considerando
+Deputado Federal + Estadual em todo o país).
+
+**Causa raiz**: o zip de candidatos do TSE não tem um único CSV
+nacional combinado — ele traz um arquivo por UF (27 arquivos). O
+código lia só `csv_names[0]`, o primeiro da lista (tipicamente "AC",
+por ordem alfabética), e processava exclusivamente aquele estado.
+
+**Correção**: `tse_api.py` agora abre e processa **todos** os arquivos
+`.csv` encontrados dentro do zip, agregando os resultados. Testado com
+um zip sintético de 3 "estados" — confirmado que os candidatos de
+todos os arquivos aparecem no resultado final, com cargo e UF
+corretos.
+
+### 5. Fuzzy de uma palavra colidindo com palavras comuns (escala do TSE)
+
+**Sintoma**: notícias sobre o técnico de futebol "Jair Ventura" e sobre
+o artigo "Cores não estão na luz..." geraram commits errados em
+`adriana-ventura.md` e `altineu-cortes.md`.
+
+**Causa raiz**: dois problemas diferentes no mesmo bug relatado.
+"Jair Ventura" já devia ter sido descartado pela checagem de nome
+precedente (bug #2 acima) — sinal de que a correção anterior não
+tinha sido aplicada ainda quando esse caso ocorreu. Já "Cores" vs
+"Côrtes" é um problema novo: a similaridade entre a palavra comum
+"cores" e o sobrenome "Côrtes" (sem acento: "cortes") é 0.909 —
+passa por pouco do limiar de 0.90 do fuzzy matching de uma palavra
+só. Com a escala do TSE (~40 mil sobrenomes), esse tipo de colisão
+acidental com palavras comuns do português deixa de ser raro.
+
+**Correção**: fuzzy matching para candidatos de uma palavra só foi
+**desativado**. Só a camada exata (que já cobre virtualmente todo
+sobrenome real registrado nessa escala, com a proteção de nome
+precedente do bug #2) trata menções de uma palavra. A perda é pequena
+(erro de digitação bem numa menção de sobrenome sozinho não é mais
+tolerado) frente ao ganho real de precisão.
+
+### 6. Alias de sobrenome gerado errado para nomes de urna com título/patente
+
+**Sintoma**: notícias sobre as atrizes "Maria Fernanda Cândido" e
+"Fernanda Montenegro" geraram commits em `coronel-fernanda.md`.
+
+**Causa raiz**: candidatos que usam nome de urna no padrão "Título/
+Patente + Primeiro Nome" (comum entre candidatos ligados à segurança
+pública — "Coronel Fernanda", "Delegado Fulano", etc.) quebram a
+heurística de `extract_surname()`, que assume que a última palavra do
+nome é sempre um sobrenome. Para "Coronel Fernanda", a última palavra
+é "Fernanda" — um primeiro nome comum, não um sobrenome distintivo —
+e virou alias automático, colidindo com qualquer "Fernanda" não
+política. Diferente do bug #2 (Edmilson Costa), a checagem de nome
+precedente não ajuda aqui: "Fernanda Montenegro" tem "Fernanda" como
+primeira palavra da frase, sem nada antes pra checar.
+
+**Correção**: `text_utils.has_title_prefix()` reconhece uma lista de
+títulos/patentes comuns (Coronel, Delegado, Sargento, Major, Doutor,
+Pastor, etc.) e `camara_api.py`/`senado_api.py`/`tse_api.py` não geram
+mais o alias automático de sobrenome quando o nome começa com um
+desses. Testado: `to_politician_dict()` para "Coronel Fernanda" não
+inclui mais "Fernanda" nos aliases, e o nome completo continua
+reconhecido normalmente.
+
+### 7. Falha do TSE derrubava o sync inteiro
+
+**Sintoma**: `sync_politicians.py` rodando no GitHub Actions terminava
+com `HTTPError: HTTP Error 403: Forbidden` e `Process completed with
+exit code 1` — mesmo Câmara e Senado, que não têm nada a ver com o
+TSE, ficavam sem sincronizar.
+
+**Causa raiz**: o CDN do TSE aparentemente bloqueia especificamente
+os IPs dos runners do GitHub Actions (funcionava localmente, no
+computador do usuário, mas não dentro do workflow) — e a exceção não
+era capturada, propagando e derrubando o script inteiro no meio da
+execução, antes mesmo de chegar no commit.
+
+**Correção**: a chamada ao sync do TSE agora está dentro de um
+`try/except` em `run()` — uma falha ali vira um aviso no log, não um
+erro fatal, e o script segue para commitar o que já foi sincronizado
+com sucesso (Câmara/Senado). Testado com um mock forçando o mesmo erro
+403: o script terminou com sucesso, e os arquivos de Câmara/Senado
+foram commitados normalmente, só o do TSE ficou de fora.
+
+### 8. Explosão de falsos positivos com nomes de urna genéricos (incidente grave)
+
+**Sintoma**: o workflow ficou rodando por mais de 4 horas, criando
+mais de 1.700 commits, repetindo a mesma notícia (uma pesquisa
+Datafolha) atribuída a dezenas de políticos sem relação nenhuma entre
+si. Como o cron dispara a cada 30 min sem esperar a execução anterior
+terminar, novas execuções foram se empilhando por cima, todas
+escrevendo no mesmo repositório de dados ao mesmo tempo.
+
+**Causa raiz**: é muito comum um candidato registrar como nome de
+urna uma única palavra genérica ("Ana", "Duda", "Superman"...) pra
+chamar atenção na cédula. Cada nome desses vira um alias de
+correspondência exata de uma palavra só — e numa base de ~40 mil
+candidatos do TSE, é praticamente garantido que algum desses nomes
+genéricos apareça, sem relação nenhuma, dentro de outro texto
+qualquer (ex.: o alias "Ana" batendo dentro de "Ana Luiza", uma
+pessoa completamente diferente, citada como parte de uma lista de
+resultados de pesquisa eleitoral). Diferente dos bugs de sobrenome
+anteriores, aqui não existe um "nome que precede" pra checar — o
+problema é o nome inteiro do candidato ser uma palavra comum demais.
+
+Um segundo problema nos dados, encontrado no meio da investigação:
+`tse_api.py` não removia acentos antes de gerar o slug, produzindo
+slugs corrompidos como `mar-lia-campos` (deveria ser
+`marilia-campos`) e `s-o`.
+
+**Correção** (três partes):
+
+1. Nomes de urna de **uma palavra só** não viram mais alias
+   automático — só nomes com 2+ palavras (o nome civil, se diferente,
+   ainda serve de alias). O preço: um candidato cujo nome de urna
+   inteiro é uma palavra genérica só é encontrado pelo nome civil, se
+   for diferente — não existe solução geral sem uma lista de nomes
+   comuns do português pra saber quais palavras seriam "seguras".
+2. `tse_api.py` agora reaproveita a função `slugify()` já testada de
+   `camara_api.py`, que remove acentos corretamente.
+3. **Trava de segurança em `main.py`**: se uma notícia bater em mais
+   de 5 políticos ao mesmo tempo, é tratado como sinal de erro de
+   correspondência — a notícia é pulada (com aviso no log) em vez de
+   gerar commits pra todo mundo. Defesa em profundidade contra
+   qualquer outro caso parecido que ainda não foi identificado.
+
+Testado: a mesma manchete real do Datafolha, reproduzida com
+candidatos sintéticos de nome de urna genérico, não gera mais nenhum
+falso positivo.
+
+### 9. Execuções do workflow se empilhando (sem controle de concorrência)
+
+**Sintoma**: enquanto uma execução travada rodava por horas, novas
+execuções continuavam dispar sendo a cada 30 minutos, todas tentando
+escrever no mesmo repositório de dados ao mesmo tempo.
+
+**Causa raiz**: o workflow não tinha nenhum controle de concorrência
+— o comportamento padrão do GitHub Actions permite execuções
+paralelas de um mesmo workflow, mesmo agendado.
+
+**Correção**: adicionado um bloco `concurrency` no
+`.github/workflows/update.yml` — agora, se uma execução ainda estiver
+rodando quando o próximo agendamento disparar, a nova fica **na
+fila** em vez de rodar em paralelo. Isso não substitui a correção do
+bug #8 (que é a causa raiz de qualquer execução ficar lenta o
+suficiente pra isso importar), mas evita que qualquer problema futuro
+do tipo vire uma pilha de execuções conflitantes.
+
 ## Estrutura do projeto
 
 - `config.py` — mescla políticos manuais + Câmara + Senado, e as fontes RSS
@@ -335,7 +669,7 @@ GitHub e adicionar `git -C data/repo push` no fim do cron.
 - `summarizer.py` — resumo automático de commit message via LLM (requer instalação à parte)
 - `scraper.py` — busca e faz parse de feeds RSS (sem dependências externas)
 - `repo_writer.py` — grava as notícias como commits reais no Git
-- `site_generator.py` — gera o site estático HTML a partir do histórico Git
+- `site_generator.py` — gera o site estático HTML (busca + filtro por nome/partido/cargo na página inicial) a partir do histórico Git
 - `main.py` — orquestra o pipeline completo de notícias (`--backend alias|spacy`, `--summarize`)
 - `git_events.py` — merge real para troca de partido + tags anotadas para marcos formais
 - `record_event.py` — CLI manual/curada para registrar esses eventos com confirmação
@@ -344,18 +678,24 @@ GitHub e adicionar `git -C data/repo push` no fim do cron.
 - `sample_deputados.json` — amostra real da API da Câmara para testar offline
 - `sample_senadores.xml` — amostra real da API do Senado para testar offline
 - `real_sample_feed_camara.xml` — amostra real do feed de Política da Câmara
+- `tse_api.py` — integração com o dataset de candidatos 2026 do TSE
+- `sample_tse_candidatos.csv` — amostra sintética do CSV do TSE para testar offline
+- `plano-deputados-estaduais.md` — plano de pesquisa/implementação para as 27 Assembleias Legislativas
 
 ## Próximos passos sugeridos
 
-1. **Outros Poderes**: STF, governadores e prefeitos não têm uma API
-   central única — dá pra criar módulos parecidos com `camara_api.py`
-   caso surjam fontes de dados abertos específicas para cada um.
-2. **Crescimento automático da base**: usar `ner_spacy.py` em modo de
+1. **Fase 1 do plano de deputados estaduais**: construir `almg_api.py`
+   (Minas Gerais) seguindo o padrão de `camara_api.py` — é a integração
+   estadual mais viável encontrada até agora. Ver
+   `plano-deputados-estaduais.md`.
+2. **Validar o TSE contra o arquivo real**: `tse_api.py` foi construído
+   a partir do layout documentado, mas nunca rodou contra o ZIP de
+   verdade — primeira coisa a testar antes de confiar nele em produção.
+3. **Crescimento automático da base**: usar `ner_spacy.py` em modo de
    auditoria (`resolve_entities()`) para listar pessoas mencionadas com
-   frequência nas notícias que ainda não estão em `config.py`, e
-   revisar periodicamente quem deveria virar um novo político monitorado.
-3. **Testar o workflow de ponta a ponta**: como explicado na seção de
-   deploy, o `.github/workflows/update.yml` não pôde ser validado com
-   um `git push` real nesta sessão — vale rodá-lo manualmente
-   (`workflow_dispatch`) assim que configurar os dois repositórios,
-   antes de deixá-lo rodando sem supervisão no agendamento automático.
+   frequência nas notícias que ainda não estão em `config.py`.
+4. **Monitorar o tamanho do repositório de dados**: com TSE + Câmara +
+   Senado, o `gitpolitica-data` pode chegar a dezenas de milhares de
+   arquivos — vale acompanhar o tempo de clone/checkout do workflow ao
+   longo do tempo, e considerar arquivar candidaturas de eleições
+   passadas se isso virar um problema.
