@@ -41,7 +41,7 @@ jobs:
         # DATA_REPO_TOKEN neste repositório de código.
         uses: actions/checkout@v4
         with:
-          repository: SEU-USUARIO/gitpolitica-data
+          repository: lauercode/gitpolitica-data
           token: ${{ secrets.DATA_REPO_TOKEN }}
           path: data/repo
           fetch-depth: 0
