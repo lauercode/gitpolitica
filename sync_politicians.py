@@ -6,6 +6,7 @@ resultado ali. config.py lê esses arquivos automaticamente (se
 existirem) e mescla com a lista manual de cargos "especiais"
 (Presidente, Ministros, Governadores).
 
+
 IMPORTANTE: esses arquivos moram dentro de REPO_DIR de propósito — é o
 único lugar que persiste de fato entre execuções em produção (checkout
 + push a cada run). Um caminho fora dele seria recriado do zero a cada
@@ -107,6 +108,22 @@ def _commit_meta_files(repo_dir: str) -> None:
     print("Commit da lista sincronizada criado.")
 
 
+def _run_sync_step(label: str, func, *args, **kwargs) -> None:
+    """
+    Roda uma etapa de sync isolada de falhas: se essa fonte específica
+    falhar (timeout de rede, bloqueio de CDN, etc.), avisa e segue em
+    frente, sem derrubar as outras fontes que já tinham funcionado.
+    Bug real encontrado em produção: uma falha pontual de timeout na
+    API da Câmara derrubava o script inteiro, perdendo também um sync
+    de Senado/TSE que já tinha sido concluído com sucesso na mesma run.
+    """
+    try:
+        func(*args, **kwargs)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[aviso] sync de {label} falhou, pulando essa etapa: {exc}")
+    print()
+
+
 def run(
     use_sample: bool = False,
     skip_tse: bool = False,
@@ -119,26 +136,11 @@ def run(
     ensure_repo(REPO_DIR)
 
     if not skip_camara:
-        sync_camara(use_sample)
-        print()
+        _run_sync_step("Câmara", sync_camara, use_sample)
     if not skip_senado:
-        sync_senado(use_sample)
-        print()
+        _run_sync_step("Senado", sync_senado, use_sample)
     if not skip_tse:
-        # O download do TSE às vezes é bloqueado pelo CDN deles
-        # especificamente para IPs de provedores de nuvem/CI (comum em
-        # WAFs de sites de governo — bug real encontrado em produção,
-        # rodando no GitHub Actions). Isso NÃO deve derrubar o sync de
-        # Câmara/Senado, que é independente e funciona normalmente.
-        try:
-            sync_tse(use_sample, local_zip_path=tse_local_zip)
-        except Exception as exc:  # noqa: BLE001
-            print(f"[aviso] sync do TSE falhou, pulando essa etapa: {exc}")
-            print(
-                "  Isso pode ser bloqueio de IP do provedor de CI pelo CDN do TSE. "
-                "Veja o README, seção 'Se o sync do TSE falhar no GitHub Actions'."
-            )
-        print()
+        _run_sync_step("TSE", sync_tse, use_sample, local_zip_path=tse_local_zip)
     _commit_meta_files(REPO_DIR)
 
 
