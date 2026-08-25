@@ -110,18 +110,34 @@ def _commit_meta_files(repo_dir: str) -> None:
 def run(
     use_sample: bool = False,
     skip_tse: bool = False,
+    skip_camara: bool = False,
+    skip_senado: bool = False,
     tse_local_zip: str | None = None,
 ) -> None:
     from config import REPO_DIR
 
     ensure_repo(REPO_DIR)
 
-    sync_camara(use_sample)
-    print()
-    sync_senado(use_sample)
-    print()
+    if not skip_camara:
+        sync_camara(use_sample)
+        print()
+    if not skip_senado:
+        sync_senado(use_sample)
+        print()
     if not skip_tse:
-        sync_tse(use_sample, local_zip_path=tse_local_zip)
+        # O download do TSE às vezes é bloqueado pelo CDN deles
+        # especificamente para IPs de provedores de nuvem/CI (comum em
+        # WAFs de sites de governo — bug real encontrado em produção,
+        # rodando no GitHub Actions). Isso NÃO deve derrubar o sync de
+        # Câmara/Senado, que é independente e funciona normalmente.
+        try:
+            sync_tse(use_sample, local_zip_path=tse_local_zip)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[aviso] sync do TSE falhou, pulando essa etapa: {exc}")
+            print(
+                "  Isso pode ser bloqueio de IP do provedor de CI pelo CDN do TSE. "
+                "Veja o README, seção 'Se o sync do TSE falhar no GitHub Actions'."
+            )
         print()
     _commit_meta_files(REPO_DIR)
 
@@ -138,5 +154,7 @@ if __name__ == "__main__":
     run(
         use_sample="--sample" in sys.argv,
         skip_tse="--skip-tse" in sys.argv,
+        skip_camara="--skip-camara" in sys.argv,
+        skip_senado="--skip-senado" in sys.argv,
         tse_local_zip=_get_arg_value("--tse-arquivo-local"),
     )
