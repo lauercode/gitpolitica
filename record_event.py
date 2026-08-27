@@ -63,8 +63,7 @@ def _cmd_partido(args: argparse.Namespace) -> None:
 
     ensure_repo()
     merge_hash = record_party_change(
-        politician_slug=args.slug,
-        politician_name=politician["name"],
+        politician=politician,
         old_party=args.de,
         new_party=args.para,
         headline=args.manchete,
@@ -92,7 +91,7 @@ def _cmd_marco(args: argparse.Namespace) -> None:
 
     ensure_repo()
     commit_hash = record_milestone(
-        politician_slug=args.slug,
+        politician=politician,
         tag_name=args.tag,
         tag_message=args.tag_mensagem,
         headline=args.manchete,

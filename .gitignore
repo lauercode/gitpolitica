@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 data/
 plano-deputados-estaduais.md
+cleanup_duplicate_slugs.py
+migrate_to_uf_folders.py

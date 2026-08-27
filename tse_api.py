@@ -101,19 +101,27 @@ def fetch_candidatos_zip_from_file(path: str) -> bytes:
 
 def _open_all_csvs_from_zip(zip_bytes: bytes) -> list[csv.DictReader]:
     """
-    Abre TODOS os arquivos .csv encontrados dentro do zip — o TSE
-    costuma dividir esse dataset em um CSV por UF (27 arquivos) em vez
-    de um único arquivo nacional combinado. Uma versão anterior deste
-    módulo só lia `csv_names[0]` (o primeiro arquivo, tipicamente "AC"
-    por ordem alfabética) e processava só aquele estado — bug real
-    encontrado em produção: retornava ~558 candidatos em vez de dezenas
-    de milhares. Corrigido para agregar todos os arquivos.
+    Abre os arquivos .csv relevantes dentro do zip — o TSE distribui
+    esse dataset como 27 arquivos por UF + 1 arquivo específico pra
+    Presidente/Vice (`..._BR.csv`) + 1 arquivo "BRASIL" REDUNDANTE
+    (`..._BRASIL.csv`) que já contém a soma de todos os outros 28.
+
+    Duas versões anteriores deste módulo tinham bugs opostos aqui:
+    uma só lia `csv_names[0]` (só um estado, ~558 candidatos); a
+    correção seguinte lia TODOS os arquivos sem filtro nenhum,
+    incluindo o "BRASIL" redundante — contando cada candidato em
+    dobro (~39.688 em vez dos ~20.713 esperados). Esta versão exclui
+    especificamente o arquivo "BRASIL" (mantendo o "BR", que é só
+    Presidente/Vice e não é redundante com os outros).
 
     Encoding latin-1 e delimitador ';' são o padrão histórico dos
     arquivos de dados abertos do TSE.
     """
     zf = zipfile.ZipFile(io.BytesIO(zip_bytes))
-    csv_names = [name for name in zf.namelist() if name.lower().endswith(".csv")]
+    csv_names = [
+        name for name in zf.namelist()
+        if name.lower().endswith(".csv") and not name.upper().endswith("_BRASIL.CSV")
+    ]
     if not csv_names:
         raise RuntimeError("Nenhum arquivo .csv encontrado dentro do zip do TSE.")
 

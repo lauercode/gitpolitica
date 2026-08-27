@@ -2,6 +2,7 @@
 text_utils.py — utilitários de normalização de texto compartilhados.
 """
 
+import re
 import unicodedata
 
 
@@ -58,3 +59,29 @@ def has_title_prefix(full_name: str) -> bool:
     if not tokens:
         return False
     return normalize(tokens[0]) in _PREFIXOS_TITULO_PATENTE
+
+
+_UF_PATTERN = re.compile(r"\(([A-Z]{2})\)")
+_UFS_VALIDAS = {
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT",
+    "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO",
+    "RR", "SC", "SP", "SE", "TO",
+}
+
+
+def extract_uf(role: str) -> str:
+    """
+    Extrai a sigla de UF do campo "role" de um político (ex:
+    "Deputado(a) Federal (SP)" -> "SP"). Usado para organizar os
+    arquivos do repositório de dados em subpastas por estado, em vez
+    de todos juntos na raiz — necessário na escala do TSE (~40 mil
+    candidatos ficariam ilegíveis numa pasta só no GitHub).
+
+    Retorna "nacional" para políticos sem UF no cargo (Presidente,
+    Ex-Presidente, ministros do STF) ou quando o padrão não é
+    reconhecido.
+    """
+    match = _UF_PATTERN.search(role or "")
+    if match and match.group(1) in _UFS_VALIDAS:
+        return match.group(1)
+    return "nacional"

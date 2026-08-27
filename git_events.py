@@ -37,11 +37,10 @@ essas funções.
 
 import os
 import re
-import subprocess
 from datetime import datetime, timezone
 
 from config import REPO_DIR
-from repo_writer import _run_git, commit_news, tag_release
+from repo_writer import _run_git, commit_news, tag_release, get_politician_relative_path
 
 
 def _current_branch(repo_dir: str = REPO_DIR) -> str:
@@ -70,8 +69,7 @@ def _update_party_field(filepath: str, new_party: str) -> None:
 
 
 def record_party_change(
-    politician_slug: str,
-    politician_name: str,
+    politician: dict,
     old_party: str,
     new_party: str,
     headline: str,
@@ -90,15 +88,16 @@ def record_party_change(
     published_at = published_at or datetime.now(timezone.utc)
     date_str = published_at.strftime("%Y-%m-%d")
     main_branch = _current_branch(repo_dir)
+    relative_path = get_politician_relative_path(politician)
     branch_name = (
-        f"partido/{politician_slug}/"
+        f"partido/{politician['slug']}/"
         f"{_slugify_branch_component(new_party)}-{date_str}"
     )
 
     try:
         _run_git(["checkout", "-q", "-b", branch_name], cwd=repo_dir)
 
-        filepath = os.path.join(repo_dir, f"{politician_slug}.md")
+        filepath = os.path.join(repo_dir, relative_path)
         _update_party_field(filepath, new_party)
 
         entry = (
@@ -109,20 +108,20 @@ def record_party_change(
         with open(filepath, "a", encoding="utf-8") as f:
             f.write(entry)
 
-        _run_git(["add", f"{politician_slug}.md"], cwd=repo_dir)
+        _run_git(["add", relative_path], cwd=repo_dir)
         _run_git(
             [
                 "commit",
                 "-q",
                 "-m",
-                f"chore: atualiza partido de {politician_name} para {new_party}",
+                f"chore: atualiza partido de {politician['name']} para {new_party}",
             ],
             cwd=repo_dir,
         )
 
         _run_git(["checkout", "-q", main_branch], cwd=repo_dir)
         merge_message = (
-            f"merge: {politician_name} migra de {old_party} para {new_party} "
+            f"merge: {politician['name']} migra de {old_party} para {new_party} "
             f"(fonte: {source_name})"
         )
         _run_git(
@@ -143,7 +142,7 @@ def record_party_change(
 
 
 def record_milestone(
-    politician_slug: str,
+    politician: dict,
     tag_name: str,
     tag_message: str,
     headline: str,
@@ -159,7 +158,7 @@ def record_milestone(
     Retorna o hash do commit criado (a tag aponta pra ele).
     """
     commit_hash = commit_news(
-        politician_slug=politician_slug,
+        politician=politician,
         headline=headline,
         source_name=source_name,
         source_url=source_url,
@@ -167,7 +166,7 @@ def record_milestone(
         event_type="release",
         repo_dir=repo_dir,
     )
-    tag_release(politician_slug, tag_name, tag_message, repo_dir=repo_dir)
+    tag_release(politician, tag_name, tag_message, repo_dir=repo_dir)
     return commit_hash
 
 
@@ -176,13 +175,14 @@ if __name__ == "__main__":
     # não é uma notícia real, só existe para provar que o merge e a tag
     # funcionam de verdade no Git. Veja o README para como isso se
     # conecta (manualmente) a eventos reais.
+    from config import POLITICIANS
     from repo_writer import ensure_repo, get_log
 
     ensure_repo()
+    arthur_lira = next(p for p in POLITICIANS if p["slug"] == "arthur-lira")
 
     merge_hash = record_party_change(
-        politician_slug="arthur-lira",
-        politician_name="Arthur Lira",
+        politician=arthur_lira,
         old_party="PP",
         new_party="PARTIDO-TESTE",
         headline="[CENÁRIO DE TESTE, não é notícia real] migra de partido",
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     print(f"Merge de troca de partido criado: {merge_hash[:8]}")
 
     milestone_hash = record_milestone(
-        politician_slug="arthur-lira",
+        politician=arthur_lira,
         tag_name="v-teste-marco-ficticio",
         tag_message="[CENÁRIO DE TESTE, não é notícia real] marco formal fictício",
         headline="[CENÁRIO DE TESTE] toma posse em cargo fictício",
@@ -202,5 +202,5 @@ if __name__ == "__main__":
     print(f"Commit de marco criado: {milestone_hash[:8]}")
 
     print("\nHistórico de arthur-lira após os dois eventos:")
-    for entry in get_log("arthur-lira"):
+    for entry in get_log(arthur_lira):
         print(f"  {entry['hash'][:8]}  {entry['message']}")

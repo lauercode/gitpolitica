@@ -45,12 +45,57 @@ Isso vai:
 
 ## Explorar o repositório Git gerado como um repo de verdade
 
+Cada político fica em `<UF>/<slug>.md` (ex.: `SP/arthur-lira.md`), não
+solto na raiz — necessário na escala do TSE (ver seção "Organização em
+subpastas por UF" abaixo).
+
 ```bash
 cd data/repo
-git log --oneline                    # todos os commits
-git log --oneline -- lula.md         # só os commits sobre um político
-git show <hash>                      # ver o diff de um commit específico
+git log --oneline                        # todos os commits
+git log --oneline -- SP/arthur-lira.md   # só os commits sobre um político
+git show <hash>                          # ver o diff de um commit específico
 ```
+
+## Organização em subpastas por UF
+
+**Problema real encontrado em produção**: com o dataset do TSE, o
+repositório de dados chegou a quase 20 mil arquivos `.md`, todos soltos
+na raiz — impossível de navegar pela interface do GitHub.
+
+**Correção**: cada político agora fica em `<UF>/<slug>.md` (`SP/`,
+`RJ/`, ..., `nacional/` para quem não tem UF — Presidente, ministros
+do STF). Isso é feito por `text_utils.extract_uf()`, que lê a UF do
+campo `role` do político, e `repo_writer.get_politician_relative_path()`,
+usada em todo lugar que lê/escreve arquivos de político
+(`ensure_repo()`, `commit_news()`, `get_log()`, `git_events.py`).
+
+### Se você já tem um repositório de dados no formato antigo (achatado)
+
+Atualizar o código sozinho **não move** os arquivos que já existem —
+`ensure_repo()` só cria arquivos que ainda não existem no caminho
+*novo*, então sem migração você acabaria com arquivos duplicados (a
+versão antiga solta na raiz + uma versão nova vazia na subpasta).
+
+Rode `migrate_to_uf_folders.py` **uma vez**, direto no seu repositório
+de dados real, antes de rodar o pipeline com o código novo:
+
+```bash
+cd data/repo   # ou onde estiver seu repositório de dados
+python3 ../../migrate_to_uf_folders.py . --dry-run   # confira o plano primeiro
+python3 ../../migrate_to_uf_folders.py .             # migra de verdade
+git push
+```
+
+O script usa `git mv` (preserva o histórico de cada arquivo — testado
+com `git log --follow`, confirma que o log de antes da migração
+continua acessível) e faz **um único commit** no final, não um por
+arquivo. Arquivos cujo slug não existe mais na lista atual de
+políticos vão para `_nao_reconhecidos/`, para revisão manual, em vez
+de serem descartados.
+
+Testado com 3.000 arquivos sintéticos: ~9 segundos — extrapolando
+linearmente, um repositório com ~20 mil arquivos deve levar em torno
+de 1 minuto.
 
 ## Como funciona a identificação de políticos nas notícias (NER)
 
@@ -656,6 +701,139 @@ bug #8 (que é a causa raiz de qualquer execução ficar lenta o
 suficiente pra isso importar), mas evita que qualquer problema futuro
 do tipo vire uma pilha de execuções conflitantes.
 
+### 10. Falsos positivos persistindo mesmo após as correções anteriores
+
+**Sintoma**: mesmo depois dos bugs #8 e #9, novas fontes RSS adicionadas
+(G1, Folha, Gazeta do Povo, BBC) continuaram gerando commits errados —
+ex.: uma notícia sobre "Caso Lulinha" batendo em candidatos como
+"Mario Concreto" e "Milena do Reforço", sem relação nenhuma.
+
+**Causa raiz**: medi a similaridade real entre os candidatos extraídos
+do título ("Caso Lulinha", "Mendonça") e os nomes que bateram errado —
+os scores ficaram entre 0.18 e 0.48, bem abaixo do limiar de 0.85. Ou
+seja, **não era fuzzy matching** — era correspondência **exata**. A
+explicação: o matcher rodava contra `título + descrição` da notícia, e
+a descrição do RSS de fontes mais genéricas (diferente das duas fontes
+curadas originais, Agência Brasil e Agência Câmara) pode trazer
+conteúdo bem mais solto — incluindo, aparentemente, menções incidentais
+a candidatos em algum lugar do corpo do texto, sem relação real com a
+matéria principal.
+
+**Correção** (três partes):
+
+1. A correspondência agora usa **só o título** da notícia, não mais
+   título+descrição. A descrição continua disponível pro resumo via
+   `--summarize`, só não participa mais da decisão de "quem foi
+   citado".
+2. Políticos do TSE (fonte `"tse"`) são **excluídos da camada de
+   fuzzy matching** inteiramente — só correspondência exata. O fuzzy
+   multi-palavra, validado e seguro na escala pequena de Câmara/Senado
+   (~600 pessoas), tem uma chance alta demais de colidir por acaso com
+   algum nome entre 40 mil candidatos do TSE. Cada político agora
+   carrega um campo `"source"` (manual/camara/senado/tse) pra viabilizar
+   esse filtro.
+3. O limite da trava de segurança (bug #8) caiu de 5 para 3 — um
+   incidente anterior teve exatamente 5 correspondências, que não
+   disparavam a trava antiga (`> 5`, não `>= 5`).
+
+**Nota sobre dados antigos**: parte dos falsos positivos reportados
+(ex.: "Flávio" batendo em 24 políticos) é esperada se o
+`_meta/politicians_tse.json` do seu repositório de dados ainda não foi
+regenerado com o `tse_api.py` corrigido do bug #8 — corrigir o código
+não limpa retroativamente dados já sincronizados com a versão antiga.
+Confirmado com um teste sintético: com aliases corretos (só "Flávio
+Bolsonaro" e "Bolsonaro", nunca "Flávio" sozinho), essa notícia não
+bate em ninguém.
+
+### 11. `ensure_repo()` usava lista de políticos "congelada"
+
+**Sintoma**: `sync_politicians.py` salvou 39.688 candidatos em
+`politicians_tse.json`, mas só 19.477 arquivos `.md` existiam no
+repositório de dados — quase 20 mil faltando.
+
+**Causa raiz**: `repo_writer.py` importava `POLITICIANS` de `config.py`
+uma única vez, no topo do arquivo (`from config import REPO_DIR,
+POLITICIANS`). Esse valor só é calculado quando o módulo `config` é
+importado pela primeira vez — o que acontece bem no início da
+execução de `sync_politicians.py`, **antes** de `sync_tse()` escrever
+o JSON atualizado com os 39.688 candidatos. Como `run()` chama
+`ensure_repo()` **antes** de sincronizar as fontes, ela sempre criava
+arquivos só para quem já existia antes daquela execução começar —
+qualquer candidato novo (ou com dados corrigidos, como no bug #8)
+nunca ganhava um arquivo próprio, silenciosamente.
+
+Reproduzido e confirmado: um teste isolado mostrou exatamente esse
+comportamento — só o candidato que já existia no JSON no momento do
+import ganhou arquivo; dois candidatos escritos no JSON *depois*
+(simulando o que `sync_tse()` faz de verdade) ficaram de fora.
+
+**Correção**: `ensure_repo()` agora recarrega a lista de políticos na
+hora (`config.load_politicians()`), a cada chamada, em vez de depender
+de um valor importado uma única vez. Testado com o mesmo cenário exato
+do bug: os candidatos novos passaram a ganhar arquivo normalmente.
+
+### 12. Slugs continuavam com hífen no lugar de acentos
+
+Se isso ainda estiver acontecendo depois de aplicar as correções
+anteriores, quase certamente `tse_api.py` no seu ambiente ainda é uma
+versão anterior à correção do bug #8 (que trocou a geração de slug
+manual por `slugify()`, importada de `camara_api.py`, com remoção
+correta de acentos via `unicodedata`). Confirme rodando:
+
+```bash
+grep "from camara_api import slugify" tse_api.py
+```
+
+Se não retornar nada, o arquivo está desatualizado — substitua pela
+versão mais recente.
+
+### 13. Arquivo `BRASIL.csv` redundante contando candidatos em dobro
+
+**Sintoma**: `politicians_tse.json` tinha 39.688 candidatos, quase o
+dobro dos ~20.713 esperados pra 2026 (número informado pelo usuário,
+que abriu o zip manualmente e contou).
+
+**Causa raiz**: o zip do TSE tem 29 CSVs — 27 por UF, mais
+`..._BR.csv` (só Presidente/Vice, arquivo legítimo e não-redundante),
+mais `..._BRASIL.csv`, que é a **soma de todos os outros 28 arquivos
+num só**. A correção do bug #4 (que passou a ler todos os CSVs do
+zip, não só o primeiro) processava esse arquivo redundante também,
+contando cada candidato duas vezes.
+
+**Correção**: `_open_all_csvs_from_zip()` agora ignora especificamente
+qualquer arquivo terminado em `_BRASIL.csv` (mantendo o `_BR.csv`,
+que não é redundante). Testado com um zip sintético reproduzindo a
+estrutura real (2 estados + presidente + um "BRASIL" redundante
+somando os três): o resultado final tem 3 candidatos, não 6.
+
+### 14. Arquivos duplicados: slug antigo (corrompido) ao lado do novo (correto)
+
+**Sintoma**: depois de aplicar a correção de acentos (bug #12) e
+resincronizar, o total de arquivos `.md` só cresceu — candidatos que
+já tinham arquivo com o slug antigo (ex.: `alyne-vit-ria.md`) ganharam
+um SEGUNDO arquivo com o slug novo e correto (`alyne-vitoria.md`), sem
+o antigo ser removido.
+
+**Causa raiz**: `ensure_repo()` só *cria* arquivos que não existem —
+ela nunca soube que `alyne-vit-ria.md` e `alyne-vitoria.md` eram, na
+verdade, a mesma pessoa antes e depois da correção do slug.
+
+**Correção**: script novo, `cleanup_duplicate_slugs.py`. Para cada
+político atual, reconstrói qual seria o slug ANTIGO (reproduzindo a
+lógica quebrada de antes) a partir do nome; se existir um arquivo
+nesse caminho antigo, ele é removido — mas não antes de copiar
+qualquer notícia real já registrada nele pro arquivo novo (evitando
+perder histórico). Testado nos dois cenários: arquivo antigo só com o
+commit "init" (removido direto) e arquivo antigo com notícia real
+registrada (mesclada no arquivo novo antes da remoção).
+
+```bash
+cd data/repo
+python3 ../../cleanup_duplicate_slugs.py . --dry-run   # confira antes
+python3 ../../cleanup_duplicate_slugs.py .             # de verdade
+git push
+```
+
 ## Estrutura do projeto
 
 - `config.py` — mescla políticos manuais + Câmara + Senado, e as fontes RSS
@@ -668,7 +846,9 @@ do tipo vire uma pilha de execuções conflitantes.
 - `ner_spacy.py` — backend opcional de NER via spaCy (requer instalação à parte)
 - `summarizer.py` — resumo automático de commit message via LLM (requer instalação à parte)
 - `scraper.py` — busca e faz parse de feeds RSS (sem dependências externas)
-- `repo_writer.py` — grava as notícias como commits reais no Git
+- `repo_writer.py` — grava as notícias como commits reais no Git (organizados em subpastas por UF)
+- `migrate_to_uf_folders.py` — migração única para reorganizar um repositório de dados existente (achatado) em subpastas por UF
+- `cleanup_duplicate_slugs.py` — remove arquivos duplicados deixados pelo bug de slug com acento corrompido
 - `site_generator.py` — gera o site estático HTML (busca + filtro por nome/partido/cargo na página inicial) a partir do histórico Git
 - `main.py` — orquestra o pipeline completo de notícias (`--backend alias|spacy`, `--summarize`)
 - `git_events.py` — merge real para troca de partido + tags anotadas para marcos formais

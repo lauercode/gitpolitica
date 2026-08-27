@@ -79,7 +79,7 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
 
     rows = []
     for politician in sorted_politicians:
-        log = get_log(politician["slug"])
+        log = get_log(politician)
         last_commit = log[0]["message"] if log else "sem commits ainda"
         cargo = _cargo_category(politician["role"])
         # Atributos data-* em minúsculo/sem aspas conflitantes para o JS de filtro ler.
@@ -166,7 +166,7 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
 
 
 def generate_politician_page(politician: dict, site_dir: str = SITE_DIR) -> None:
-    log = get_log(politician["slug"])
+    log = get_log(politician)
     commits_html = "".join(
         f"""
         <div class="commit">

@@ -84,7 +84,7 @@ def run(use_sample: bool = False, backend: str = "alias", summarize: bool = Fals
         for politician in matches:
             # Evita recommitar a mesma notícia se o pipeline rodar de novo:
             # checagem simples pelo link já presente no log.
-            existing = get_log(politician["slug"])
+            existing = get_log(politician)
             if any(item.link in entry["message"] for entry in existing):
                 continue
             if any(item.title in entry["message"] for entry in existing):
@@ -99,7 +99,7 @@ def run(use_sample: bool = False, backend: str = "alias", summarize: bool = Fals
                 )
 
             commit_hash = commit_news(
-                politician_slug=politician["slug"],
+                politician=politician,
                 headline=headline,
                 source_name=item.source_name,
                 source_url=item.link,
