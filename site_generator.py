@@ -3,17 +3,33 @@ site_generator.py — gera um site estático simples (HTML) a partir do
 histórico de commits do repositório, imitando a página de um repo no
 GitHub: lista de "arquivos" (políticos) e o "log de commits" de cada um.
 
-A página inicial (index.html) lista TODOS os políticos monitorados
-(não só os que tiveram notícia recentemente) e tem busca por nome +
-filtros por partido e por cargo, tudo em JavaScript puro no navegador
-(sem backend, sem build step) — adequado para um site 100% estático
-publicado no GitHub Pages.
+ESTRUTURA (redesenhada para escala — com o TSE, o site passou de ~20
+políticos pra mais de 20 mil "arquivos"):
+
+  - index.html: só 3 cards de categoria (Em exercício / Candidatos
+    2026 / Outros cargos), sem listar político nenhum diretamente —
+    uma página com 20 mil cards HTML ficava grande e lenta demais.
+  - <categoria>.html: uma página por categoria, com busca + filtros
+    (nome, partido, cargo, UF) e PAGINAÇÃO client-side em JavaScript —
+    os dados de todos os políticos daquela categoria vêm embutidos
+    como um array JSON na página, mas só uma página de resultados (50
+    por vez) é de fato renderizada no DOM a cada momento.
+  - <slug>.html: continua uma página por político, com o histórico de
+    commits completo (inalterado).
+
+Para manter a geração do site rápida mesmo com ~20 mil políticos, as
+páginas de categoria NÃO chamam get_log() para cada um (isso exigiria
+20 mil subprocessos `git log`, lento demais) — só mostram nome,
+partido, cargo e UF. O histórico completo de commits só é buscado na
+página individual de cada político (uma chamada get_log() por vez,
+sob demanda).
 """
 
 import json
 import os
 from config import POLITICIANS, REPO_DIR, SITE_DIR
 from repo_writer import get_log
+from text_utils import extract_uf
 
 STYLE = """
 <style>
@@ -42,8 +58,54 @@ STYLE = """
   .filters button:hover { background: #eaeef2; }
   #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
   #no-results { display: none; color: #59636e; padding: 20px 0; }
+
+  .category-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .category-card {
+    display: block; border: 1px solid #d1d9e0; border-radius: 10px;
+    padding: 24px; text-decoration: none; color: inherit;
+  }
+  .category-card:hover { background: #f6f8fa; border-color: #0969da; }
+  .category-card h2 { margin: 0 0 6px 0; color: #0969da; font-size: 1.3em; }
+  .category-card p { margin: 0; color: #59636e; }
+  .category-count { font-weight: 700; font-size: 1.4em; color: #1f2328; }
+
+  .pagination { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 24px 0; }
+  .pagination button {
+    padding: 8px 16px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+  .pagination button:not(:disabled):hover { background: #eaeef2; }
 </style>
 """
+
+# Categorias de alto nível, baseadas na origem de cada político — ver
+# config.load_politicians(), que marca cada um com "source".
+_CATEGORIAS = [
+    {
+        "key": "eleitos",
+        "sources": {"camara", "senado"},
+        "titulo": "Em exercício — Câmara e Senado",
+        "descricao": "Deputados federais e senadores atualmente em exercício.",
+    },
+    {
+        "key": "candidatos",
+        "sources": {"tse"},
+        "titulo": "Candidatos à Eleição 2026",
+        "descricao": (
+            "Presidente, governadores, senadores, deputados federais e "
+            "estaduais registrados para a eleição de 2026."
+        ),
+    },
+    {
+        "key": "outros",
+        "sources": {"manual"},
+        "titulo": "Outros cargos",
+        "descricao": "Presidência, ministros do STF, governadores e demais cargos especiais.",
+    },
+]
+
+_PAGE_SIZE = 50
 
 
 def _cargo_category(role: str) -> str:
@@ -64,48 +126,78 @@ def _cargo_category(role: str) -> str:
     return role  # fallback: usa o valor cru se não reconhecer nenhum padrão
 
 
+def _politician_summary(politician: dict) -> dict:
+    """Resumo leve (sem tocar no Git) usado nas páginas de categoria."""
+    return {
+        "slug": politician["slug"],
+        "name": politician["name"],
+        "party": (politician.get("party") or "-").upper(),
+        "cargo": _cargo_category(politician.get("role", "")),
+        "uf": extract_uf(politician.get("role", "")),
+    }
+
+
+def _fmt_br(n: int) -> str:
+    """Formata um número com separador de milhar no padrão brasileiro (ponto)."""
+    return f"{n:,}".replace(",", ".")
+
+
 def generate_index(site_dir: str = SITE_DIR) -> None:
     os.makedirs(site_dir, exist_ok=True)
 
-    sorted_politicians = sorted(POLITICIANS, key=lambda p: p["name"])
-
-    # Normaliza a caixa do partido só para o filtro/dropdown — evita
-    # duplicatas como "Republicanos" (entrada manual) vs "REPUBLICANOS"
-    # (API da Câmara/Senado, que retorna sempre em maiúsculas).
-    parties = sorted(
-        {p["party"].upper() for p in sorted_politicians if p["party"] and p["party"] != "-"}
-    )
-    cargos = sorted({_cargo_category(p["role"]) for p in sorted_politicians})
-
-    rows = []
-    for politician in sorted_politicians:
-        log = get_log(politician)
-        last_commit = log[0]["message"] if log else "sem commits ainda"
-        cargo = _cargo_category(politician["role"])
-        # Atributos data-* em minúsculo/sem aspas conflitantes para o JS de filtro ler.
-        rows.append(
+    cards = []
+    for categoria in _CATEGORIAS:
+        count = sum(1 for p in POLITICIANS if p.get("source") in categoria["sources"])
+        cards.append(
             f"""
-            <div class="politician-card"
-                 data-name="{politician['name'].lower()}"
-                 data-party="{politician['party'].upper()}"
-                 data-cargo="{cargo}">
-              <a href="{politician['slug']}.html">{politician['name']}</a>
-              <div class="meta">{politician['role']} · {politician['party']} · {len(log)} commits</div>
-              <div class="meta">Último: {last_commit}</div>
-            </div>
+            <a class="category-card" href="{categoria['key']}.html">
+              <h2>{categoria['titulo']}</h2>
+              <p>{categoria['descricao']}</p>
+              <p class="category-count">{_fmt_br(count)} político(a)s</p>
+            </a>
             """
         )
 
-    party_options = "".join(f'<option value="{p}">{p}</option>' for p in parties)
-    cargo_options = "".join(f'<option value="{c}">{c}</option>' for c in cargos)
-    total = len(sorted_politicians)
-
+    total = len(POLITICIANS)
     html = f"""<!DOCTYPE html>
 <html lang="pt-br">
 <head><meta charset="utf-8"><title>GitPolítica</title>{STYLE}</head>
 <body>
   <h1>🏛️ GitPolítica</h1>
   <p class="meta">Um "GitHub" da política brasileira — cada político é um arquivo, cada notícia é um commit.</p>
+  <p class="meta">{_fmt_br(total)} políticos monitorados no total.</p>
+  <div class="category-grid">
+    {''.join(cards)}
+  </div>
+</body>
+</html>"""
+
+    with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
+    politicians = [p for p in POLITICIANS if p.get("source") in categoria["sources"]]
+    summaries = [_politician_summary(p) for p in politicians]
+    summaries.sort(key=lambda p: p["name"])
+
+    parties = sorted({p["party"] for p in summaries if p["party"] and p["party"] != "-"})
+    cargos = sorted({p["cargo"] for p in summaries})
+    ufs = sorted({p["uf"] for p in summaries})
+
+    party_options = "".join(f'<option value="{p}">{p}</option>' for p in parties)
+    cargo_options = "".join(f'<option value="{c}">{c}</option>' for c in cargos)
+    uf_options = "".join(f'<option value="{u}">{u}</option>' for u in ufs)
+
+    data_json = json.dumps(summaries, ensure_ascii=False)
+
+    html = f"""<!DOCTYPE html>
+<html lang="pt-br">
+<head><meta charset="utf-8"><title>{categoria['titulo']} — GitPolítica</title>{STYLE}</head>
+<body>
+  <a class="back-link" href="index.html">&larr; voltar</a>
+  <h1>{categoria['titulo']}</h1>
+  <p class="meta">{categoria['descricao']}</p>
 
   <div class="filters">
     <input type="text" id="search" placeholder="Buscar por nome..." oninput="applyFilters()">
@@ -117,51 +209,90 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
       <option value="">Todos os cargos</option>
       {cargo_options}
     </select>
+    <select id="filter-uf" onchange="applyFilters()">
+      <option value="">Todos os estados</option>
+      {uf_options}
+    </select>
     <button onclick="clearFilters()">Limpar filtros</button>
   </div>
 
-  <div id="result-count">{total} de {total} políticos</div>
-  <div id="cards-container">
-    {''.join(rows)}
-  </div>
+  <div id="result-count"></div>
+  <div id="cards-container"></div>
   <div id="no-results">Nenhum político encontrado com esses filtros.</div>
 
+  <div class="pagination">
+    <button id="prev-page" onclick="goToPage(-1)">&larr; Anterior</button>
+    <span id="page-info"></span>
+    <button id="next-page" onclick="goToPage(1)">Próxima &rarr;</button>
+  </div>
+
   <script>
-    const TOTAL = {total};
+    const DATA = {data_json};
+    const PAGE_SIZE = {_PAGE_SIZE};
+    let filtered = DATA;
+    let currentPage = 1;
 
     function applyFilters() {{
       const query = document.getElementById('search').value.trim().toLowerCase();
       const party = document.getElementById('filter-party').value;
       const cargo = document.getElementById('filter-cargo').value;
-      const cards = document.querySelectorAll('.politician-card');
-      let visibleCount = 0;
+      const uf = document.getElementById('filter-uf').value;
 
-      cards.forEach(card => {{
-        const matchesName = !query || card.dataset.name.includes(query);
-        const matchesParty = !party || card.dataset.party === party;
-        const matchesCargo = !cargo || card.dataset.cargo === cargo;
-        const show = matchesName && matchesParty && matchesCargo;
-        card.style.display = show ? '' : 'none';
-        if (show) visibleCount++;
+      filtered = DATA.filter(p => {{
+        const matchesName = !query || p.name.toLowerCase().includes(query);
+        const matchesParty = !party || p.party === party;
+        const matchesCargo = !cargo || p.cargo === cargo;
+        const matchesUf = !uf || p.uf === uf;
+        return matchesName && matchesParty && matchesCargo && matchesUf;
       }});
 
-      document.getElementById('result-count').textContent =
-        visibleCount + ' de ' + TOTAL + ' políticos';
-      document.getElementById('no-results').style.display =
-        visibleCount === 0 ? 'block' : 'none';
+      currentPage = 1;
+      render();
     }}
 
     function clearFilters() {{
       document.getElementById('search').value = '';
       document.getElementById('filter-party').value = '';
       document.getElementById('filter-cargo').value = '';
+      document.getElementById('filter-uf').value = '';
       applyFilters();
     }}
+
+    function goToPage(delta) {{
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      currentPage = Math.min(Math.max(1, currentPage + delta), totalPages);
+      render();
+    }}
+
+    function render() {{
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+      const container = document.getElementById('cards-container');
+      container.innerHTML = pageItems.map(p => `
+        <div class="politician-card">
+          <a href="${{p.slug}}.html">${{p.name}}</a>
+          <div class="meta">${{p.cargo}} (${{p.uf}}) · ${{p.party}}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('result-count').textContent =
+        filtered.length.toLocaleString('pt-BR') + ' político(a)s encontrados';
+      document.getElementById('no-results').style.display =
+        filtered.length === 0 ? 'block' : 'none';
+      document.getElementById('page-info').textContent =
+        'Página ' + currentPage + ' de ' + totalPages;
+      document.getElementById('prev-page').disabled = currentPage <= 1;
+      document.getElementById('next-page').disabled = currentPage >= totalPages;
+    }}
+
+    render();
   </script>
 </body>
 </html>"""
 
-    with open(os.path.join(site_dir, "index.html"), "w", encoding="utf-8") as f:
+    with open(os.path.join(site_dir, f"{categoria['key']}.html"), "w", encoding="utf-8") as f:
         f.write(html)
 
 
@@ -196,6 +327,8 @@ def generate_politician_page(politician: dict, site_dir: str = SITE_DIR) -> None
 
 def generate_site(site_dir: str = SITE_DIR) -> None:
     generate_index(site_dir)
+    for categoria in _CATEGORIAS:
+        generate_category_page(categoria, site_dir)
     for politician in POLITICIANS:
         generate_politician_page(politician, site_dir)
 

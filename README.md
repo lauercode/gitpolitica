@@ -834,6 +834,43 @@ python3 ../../cleanup_duplicate_slugs.py .             # de verdade
 git push
 ```
 
+**Nota de campo**: em produção, o `git rm` do script acima falhou com
+`"did not match any files"` para todos os arquivos antigos — sinal de
+que existiam no disco mas nunca tinham sido rastreados pelo Git (ex.:
+sobras de uma etapa anterior que criou o arquivo fisicamente sem
+consolidar num commit). Nesse caso, `git clean -fd` (rodado dentro de
+`data/repo`) remove esses arquivos não rastreados de uma vez — foi o
+que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
+atualizado para reportar o erro real do Git em vez de assumir sucesso
+silenciosamente.
+
+### 15. Site reorganizado por categoria + paginação (escala do TSE)
+
+**Problema**: com mais de 20 mil políticos, a página inicial listando
+todo mundo de uma vez ficava enorme e lenta pra carregar/navegar.
+
+**Correção**: `index.html` agora só mostra 3 cards de categoria (Em
+exercício — Câmara/Senado, Candidatos 2026, Outros cargos), sem listar
+ninguém diretamente. Cada categoria abre sua própria página
+(`eleitos.html`, `candidatos.html`, `outros.html`) com busca, filtros
+por **nome, partido, cargo e UF** (novo), e **paginação client-side**
+em JavaScript puro — os dados de todos os políticos daquela categoria
+vêm embutidos como um array JSON na página, mas só uma página de
+resultados (50 por vez) é de fato renderizada no navegador a cada
+momento, então o tamanho da lista nunca deixa a página pesada.
+
+Como as páginas de categoria não chamam `get_log()` (isso exigiria um
+processo `git log` por político — inviável em massa), elas mostram só
+nome/partido/cargo/UF; o histórico completo de commits continua
+disponível na página individual de cada político, como antes.
+
+Testado: geração de página com 5.000 políticos sintéticos levou 0.03s
+(arquivo final de ~530 KB, ~2 MB extrapolando pra 20 mil). A lógica de
+filtro/paginação em si foi testada rodando o JavaScript gerado de
+verdade em Node.js (com um DOM simulado) — filtro por UF, navegação
+entre páginas, busca sem resultado, e o limite no fim da paginação
+funcionaram como esperado.
+
 ## Estrutura do projeto
 
 - `config.py` — mescla políticos manuais + Câmara + Senado, e as fontes RSS
@@ -849,7 +886,7 @@ git push
 - `repo_writer.py` — grava as notícias como commits reais no Git (organizados em subpastas por UF)
 - `migrate_to_uf_folders.py` — migração única para reorganizar um repositório de dados existente (achatado) em subpastas por UF
 - `cleanup_duplicate_slugs.py` — remove arquivos duplicados deixados pelo bug de slug com acento corrompido
-- `site_generator.py` — gera o site estático HTML (busca + filtro por nome/partido/cargo na página inicial) a partir do histórico Git
+- `site_generator.py` — gera o site estático HTML: index com 3 categorias + páginas com busca/filtro (nome/partido/cargo/UF) e paginação client-side
 - `main.py` — orquestra o pipeline completo de notícias (`--backend alias|spacy`, `--summarize`)
 - `git_events.py` — merge real para troca de partido + tags anotadas para marcos formais
 - `record_event.py` — CLI manual/curada para registrar esses eventos com confirmação
