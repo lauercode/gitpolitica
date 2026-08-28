@@ -100,16 +100,23 @@ def load_politicians() -> list[dict]:
     prioridade. Candidatos do TSE cujo nome já existe nas três
     primeiras fontes são descartados (mesma pessoa, perfil de mandato
     já existente é mais informativo que o de candidatura).
+
+    Cada político é marcado com "source" (manual/camara/senado/tse) —
+    usado por matcher.py para excluir o TSE (dezenas de milhares de
+    registros) da camada de fuzzy matching multi-palavra, que só é
+    segura em escala menor e curada (bug real de colisão em produção).
     """
     from text_utils import normalize
 
-    merged = list(MANUAL_POLITICIANS)
+    merged = []
+    for politician in MANUAL_POLITICIANS:
+        merged.append({**politician, "source": "manual"})
     seen_slugs = {p["slug"] for p in merged}
 
-    for source_path in (_CAMARA_PATH, _SENADO_PATH):
+    for source_path, source_name in ((_CAMARA_PATH, "camara"), (_SENADO_PATH, "senado")):
         for politician in _load_json_list(source_path):
             if politician["slug"] not in seen_slugs:
-                merged.append(politician)
+                merged.append({**politician, "source": source_name})
                 seen_slugs.add(politician["slug"])
 
     # Nomes já cobertos por mandato (manual + Câmara + Senado), pra
@@ -121,7 +128,7 @@ def load_politicians() -> list[dict]:
             continue
         if normalize(politician["name"]) in seen_names:
             continue
-        merged.append(politician)
+        merged.append({**politician, "source": "tse"})
         seen_slugs.add(politician["slug"])
         seen_names.add(normalize(politician["name"]))
 
@@ -142,33 +149,26 @@ RSS_SOURCES = [
     {
         "name": "Agência Câmara - Política",
         "url": "https://www.camara.leg.br/noticias/rss/dinamico/POLITICA",
-    },    
-    {
-        "name": "G1 - Política:",
-        "url": "https://g1.globo.com/dynamo/politica/rss2.xml",
-    },
-    {
-        "name": "Folha de S.Paulo - Em cima da hora",
-        "url": "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
-    },
-    {
-        "name": "Gazeta do Povo - República",
-        "url": "https://www.gazetadopovo.com.br/feed/rss/republica.xml",
-    },
-    {
-        "name": "Gazeta do Povo - Congresso Nacional",
-        "url": "https://www.gazetadopovo.com.br/feed/rss/tudo-sobre/congresso-nacional.xml",
-    },
-    {
-        "name": "Gazeta do Povo - Governo Federal",
-        "url": "https://www.gazetadopovo.com.br/feed/rss/tudo-sobre/governo-federal.xml",
-    },
-    {
-        "name": "BBC Brasil - Primeira Página",
-        "url": "http://www.bbc.co.uk/portuguese/index.xml",
-    },
-    {
-        "name": "BBC Brasil - Brasil",
-        "url": "http://www.bbc.co.uk/portuguese/topicos/brasil/index.xml",
     },
 ]
+
+# Candidatas que NÃO puderam ser confirmadas nesta sessão (o ambiente que
+# gerou este projeto não tem acesso à internet para testar fetches
+# arbitrários, e g1.globo.com/feeds.folha.uol.com.br bloquearam o acesso
+# direto da ferramenta de busca usada). São padrões de URL conhecidos e
+# amplamente referenciados, mas teste antes de usar em produção — pode
+# ser que tenham mudado:
+#
+#   G1 - Política:
+#     https://g1.globo.com/dynamo/politica/rss2.xml
+#   Folha de S.Paulo - Em cima da hora (geral, não é só política):
+#     https://feeds.folha.uol.com.br/emcimadahora/rss091.xml
+#
+# Não foi encontrada uma URL de RSS atual e confiável para o Congresso em
+# Foco nesta sessão — o site não expõe um link de feed óbvio na home nem
+# em buscas. Se você usa o site e sabe a URL, pode adicioná-la abaixo.
+#
+# Dica: a cobertura de "Agência Câmara" e "Agência Brasil" já cobre boa
+# parte do noticiário do Senado também (matérias frequentemente citam
+# "com informações da Agência Senado"), então mesmo sem uma fonte
+# dedicada ao Senado a cobertura fica razoavelmente completa.
