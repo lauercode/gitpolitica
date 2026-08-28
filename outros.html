@@ -56,15 +56,15 @@
     <input type="text" id="search" placeholder="Buscar por nome..." oninput="applyFilters()">
     <select id="filter-party" onchange="applyFilters()">
       <option value="">Todos os partidos</option>
-      
+      <option value="PL">PL</option><option value="PP">PP</option><option value="PT">PT</option><option value="REPUBLICANOS">REPUBLICANOS</option>
     </select>
     <select id="filter-cargo" onchange="applyFilters()">
       <option value="">Todos os cargos</option>
-      
+      <option value="Deputado(a) Federal">Deputado(a) Federal</option><option value="Ex-Presidente">Ex-Presidente</option><option value="Governador(a)">Governador(a)</option><option value="Ministro(a)">Ministro(a)</option><option value="Presidente da República">Presidente da República</option>
     </select>
     <select id="filter-uf" onchange="applyFilters()">
       <option value="">Todos os estados</option>
-      
+      <option value="nacional">nacional</option>
     </select>
     <button onclick="clearFilters()">Limpar filtros</button>
   </div>
@@ -80,7 +80,7 @@
   </div>
 
   <script>
-    const DATA = [];
+    const DATA = [{"slug": "arthur-lira", "name": "Arthur Lira", "party": "PP", "cargo": "Deputado(a) Federal", "uf": "nacional"}, {"slug": "flavio-dino", "name": "Flávio Dino", "party": "-", "cargo": "Ministro(a)", "uf": "nacional"}, {"slug": "jair-bolsonaro", "name": "Jair Bolsonaro", "party": "PL", "cargo": "Ex-Presidente", "uf": "nacional"}, {"slug": "lula", "name": "Luiz Inácio Lula da Silva", "party": "PT", "cargo": "Presidente da República", "uf": "nacional"}, {"slug": "tarcisio-de-freitas", "name": "Tarcísio de Freitas", "party": "REPUBLICANOS", "cargo": "Governador(a)", "uf": "nacional"}];
     const PAGE_SIZE = 50;
     let filtered = DATA;
     let currentPage = 1;
