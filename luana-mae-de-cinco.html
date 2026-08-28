@@ -27,6 +27,24 @@
   .filters button:hover { background: #eaeef2; }
   #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
   #no-results { display: none; color: #59636e; padding: 20px 0; }
+
+  .category-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .category-card {
+    display: block; border: 1px solid #d1d9e0; border-radius: 10px;
+    padding: 24px; text-decoration: none; color: inherit;
+  }
+  .category-card:hover { background: #f6f8fa; border-color: #0969da; }
+  .category-card h2 { margin: 0 0 6px 0; color: #0969da; font-size: 1.3em; }
+  .category-card p { margin: 0; color: #59636e; }
+  .category-count { font-weight: 700; font-size: 1.4em; color: #1f2328; }
+
+  .pagination { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 24px 0; }
+  .pagination button {
+    padding: 8px 16px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+  .pagination button:not(:disabled):hover { background: #eaeef2; }
 </style>
 </head>
 <body>
@@ -35,6 +53,18 @@
   <p class="meta">Candidato(a) a Deputado Estadual (AL) — Eleição 2026 · PSDB</p>
   <h2>Histórico de commits</h2>
   
+        <div class="commit">
+          <div class="commit-msg">notícia: Julgamento do acusado de planejar o 11 de Setembro é marcado para 2028 (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">f4c7dd59</div>
+          <div class="commit-date">2026-08-28T00:29:08Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Cuba registra novo apagão, e 4 de 5 províncias no leste do país ficam no escuro (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">7e952f21</div>
+          <div class="commit-date">2026-08-28T00:28:58Z</div>
+        </div>
+        
         <div class="commit">
           <div class="commit-msg">notícia: Compare a evolução de patrimônio dos 20,7 mil candidatos em ferramenta interativa (fonte: Folha de S.Paulo - Em cima da hora)</div>
           <div class="commit-hash">4c9602b8</div>

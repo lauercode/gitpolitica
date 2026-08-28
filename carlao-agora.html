@@ -27,6 +27,24 @@
   .filters button:hover { background: #eaeef2; }
   #result-count { color: #59636e; font-size: 0.9em; margin-bottom: 12px; }
   #no-results { display: none; color: #59636e; padding: 20px 0; }
+
+  .category-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  .category-card {
+    display: block; border: 1px solid #d1d9e0; border-radius: 10px;
+    padding: 24px; text-decoration: none; color: inherit;
+  }
+  .category-card:hover { background: #f6f8fa; border-color: #0969da; }
+  .category-card h2 { margin: 0 0 6px 0; color: #0969da; font-size: 1.3em; }
+  .category-card p { margin: 0; color: #59636e; }
+  .category-count { font-weight: 700; font-size: 1.4em; color: #1f2328; }
+
+  .pagination { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 24px 0; }
+  .pagination button {
+    padding: 8px 16px; border: 1px solid #d1d9e0; border-radius: 6px;
+    background: #f6f8fa; cursor: pointer; font-size: 0.9em;
+  }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+  .pagination button:not(:disabled):hover { background: #eaeef2; }
 </style>
 </head>
 <body>
@@ -35,6 +53,24 @@
   <p class="meta">Candidato(a) a Deputado Federal (MG) — Eleição 2026 · PRD</p>
   <h2>Histórico de commits</h2>
   
+        <div class="commit">
+          <div class="commit-msg">notícia: Falência da Oi reforça ação contra fundos de investimento, avaliam credores (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">594f641d</div>
+          <div class="commit-date">2026-08-28T00:29:23Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Luana Piovani e Ana Paula Renault se encontram e brincam: 'Duas bravas' (fonte: Folha de S.Paulo - Em cima da hora)</div>
+          <div class="commit-hash">b3c8fb0e</div>
+          <div class="commit-date">2026-08-28T00:29:20Z</div>
+        </div>
+        
+        <div class="commit">
+          <div class="commit-msg">notícia: Quaest no AC: 57% desaprovam e 36% aprovam governo Lula (fonte: G1 - Política:)</div>
+          <div class="commit-hash">9d1af0f4</div>
+          <div class="commit-date">2026-08-28T00:13:07Z</div>
+        </div>
+        
         <div class="commit">
           <div class="commit-msg">notícia: Justiça do DF suspende imposto de exportação de 12% sobre petróleo; arrecadação já chega a R$ 7,9 bilhões (fonte: G1 - Política:)</div>
           <div class="commit-hash">5edfb666</div>
