@@ -844,6 +844,31 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Candidatos com mandato aparecem em duas categorias
+
+Quem já tem mandato (deputado, senador, ou um cargo especial como
+governador) e também está concorrendo em 2026 — pra reeleição ou pra
+outro cargo — aparece nos **dois** cards que se aplicam: o de mandato
+("Em exercício" ou "Outros cargos") e o de "Candidatos à Eleição
+2026". Continua existindo **um arquivo só** por pessoa no repositório
+de dados — não duplica o histórico Git dela.
+
+Como funciona: `config.load_politicians()` não descarta mais a
+informação de candidatura de quem já tem mandato — em vez disso,
+marca a entrada existente com `is_2026_candidate = True` e
+`candidacy_role` (o cargo específico da candidatura, ex.: "Candidato(a)
+a Senador (AL)"). `site_generator.py` usa essa marcação pra listar a
+pessoa em ambas as categorias, mostrando o cargo/UF **da candidatura**
+na página de candidatos e o cargo/UF **do mandato atual** nas outras
+páginas — mesma pessoa, informação certa em cada contexto.
+
+Bug real corrigido no caminho: a marcação só funcionava quando a
+pessoa era encontrada por *nome* — quando o *slug* já batia (o caso
+mais comum, já que o slug vem do mesmo nome), o código pulava antes de
+aplicar a marcação. Testado com um cenário controlado (Arthur Lira
+como deputado + candidato a Senador): ele aparece corretamente nas
+duas páginas, cada uma mostrando o cargo certo pro contexto.
+
 ### 15. Site reorganizado por categoria + paginação (escala do TSE)
 
 **Problema**: com mais de 20 mil políticos, a página inicial listando

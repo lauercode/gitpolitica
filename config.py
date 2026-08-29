@@ -97,9 +97,15 @@ def _load_json_list(path: str) -> list[dict]:
 def load_politicians() -> list[dict]:
     """
     Mescla MANUAL_POLITICIANS + Câmara + Senado + TSE, nessa ordem de
-    prioridade. Candidatos do TSE cujo nome já existe nas três
-    primeiras fontes são descartados (mesma pessoa, perfil de mandato
-    já existente é mais informativo que o de candidatura).
+    prioridade. Um candidato do TSE cujo nome já existe nas três
+    primeiras fontes NÃO ganha um arquivo/entrada separada (mesma
+    pessoa — um arquivo duplicado reintroduziria o problema que a
+    deduplicação por nome resolveu). Em vez disso, a entrada já
+    existente (de mandato) é marcada com `is_2026_candidate = True` e
+    `candidacy_role` (o cargo ao qual está concorrendo) — assim
+    site_generator.py consegue listar essa pessoa tanto no card de
+    "Em exercício"/"Outros" quanto no de "Candidatos 2026", sem
+    duplicar o histórico Git dela.
 
     Cada político é marcado com "source" (manual/camara/senado/tse) —
     usado por matcher.py para excluir o TSE (dezenas de milhares de
@@ -110,27 +116,42 @@ def load_politicians() -> list[dict]:
 
     merged = []
     for politician in MANUAL_POLITICIANS:
-        merged.append({**politician, "source": "manual"})
+        merged.append({**politician, "source": "manual", "is_2026_candidate": False})
     seen_slugs = {p["slug"] for p in merged}
 
     for source_path, source_name in ((_CAMARA_PATH, "camara"), (_SENADO_PATH, "senado")):
         for politician in _load_json_list(source_path):
             if politician["slug"] not in seen_slugs:
-                merged.append({**politician, "source": source_name})
+                merged.append({**politician, "source": source_name, "is_2026_candidate": False})
                 seen_slugs.add(politician["slug"])
 
-    # Nomes já cobertos por mandato (manual + Câmara + Senado), pra
-    # não duplicar quem está concorrendo à reeleição em 2026.
-    seen_names = {normalize(p["name"]) for p in merged}
+    # Mapeia slug/nome normalizado -> referência ao dict já em `merged`,
+    # pra poder marcar (mutar) a entrada existente quando encontrarmos
+    # a candidatura correspondente de 2026, em vez de só checar
+    # presença e pular.
+    slug_to_politician = {p["slug"]: p for p in merged}
+    seen_names = {normalize(p["name"]): p for p in merged}
 
     for politician in _load_json_list(_TSE_PATH):
-        if politician["slug"] in seen_slugs:
+        norm_name = normalize(politician["name"])
+
+        # Pode bater por slug (caso mais comum — o slug vem do mesmo
+        # nome) OU só por nome (slugs gerados de formas ligeiramente
+        # diferentes pra mesma pessoa). Bug real: uma versão anterior
+        # só marcava is_2026_candidate no caso "só por nome", porque o
+        # caso "por slug" tinha um `continue` antecipado que pulava
+        # essa marcação inteira.
+        existing = slug_to_politician.get(politician["slug"]) or seen_names.get(norm_name)
+
+        if existing is not None:
+            existing["is_2026_candidate"] = True
+            existing["candidacy_role"] = politician.get("role")
             continue
-        if normalize(politician["name"]) in seen_names:
-            continue
-        merged.append({**politician, "source": "tse"})
-        seen_slugs.add(politician["slug"])
-        seen_names.add(normalize(politician["name"]))
+
+        new_entry = {**politician, "source": "tse", "is_2026_candidate": True}
+        merged.append(new_entry)
+        slug_to_politician[politician["slug"]] = new_entry
+        seen_names[norm_name] = new_entry
 
     return merged
 

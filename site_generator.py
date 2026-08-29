@@ -84,22 +84,27 @@ STYLE = """
 _CATEGORIAS = [
     {
         "key": "eleitos",
-        "sources": {"camara", "senado"},
+        "matches": lambda p: p.get("source") in {"camara", "senado"},
         "titulo": "Em exercício — Câmara e Senado",
         "descricao": "Deputados federais e senadores atualmente em exercício.",
     },
     {
         "key": "candidatos",
-        "sources": {"tse"},
+        "matches": lambda p: p.get("source") == "tse" or p.get("is_2026_candidate"),
         "titulo": "Candidatos à Eleição 2026",
         "descricao": (
             "Presidente, governadores, senadores, deputados federais e "
-            "estaduais registrados para a eleição de 2026."
+            "estaduais registrados para a eleição de 2026 — inclui quem já "
+            "tem mandato e está concorrendo à reeleição ou a outro cargo."
         ),
+        # Mostra o cargo/UF da CANDIDATURA aqui, não do mandato atual —
+        # relevante pra quem tem os dois (ex.: deputado concorrendo ao
+        # Senado). Nas outras categorias, o "role" normal já é o certo.
+        "use_candidacy_role": True,
     },
     {
         "key": "outros",
-        "sources": {"manual"},
+        "matches": lambda p: p.get("source") == "manual",
         "titulo": "Outros cargos",
         "descricao": "Presidência, ministros do STF, governadores e demais cargos especiais.",
     },
@@ -126,14 +131,24 @@ def _cargo_category(role: str) -> str:
     return role  # fallback: usa o valor cru se não reconhecer nenhum padrão
 
 
-def _politician_summary(politician: dict) -> dict:
-    """Resumo leve (sem tocar no Git) usado nas páginas de categoria."""
+def _politician_summary(politician: dict, use_candidacy_role: bool = False) -> dict:
+    """
+    Resumo leve (sem tocar no Git) usado nas páginas de categoria. Se
+    `use_candidacy_role` e a pessoa tiver uma candidatura registrada
+    (`candidacy_role` — quem já tem mandato E está concorrendo em
+    2026), usa o cargo/UF da CANDIDATURA em vez do mandato atual, já
+    que essa é a informação relevante na página de candidatos.
+    """
+    role_for_display = politician.get("role", "")
+    if use_candidacy_role and politician.get("candidacy_role"):
+        role_for_display = politician["candidacy_role"]
+
     return {
         "slug": politician["slug"],
         "name": politician["name"],
         "party": (politician.get("party") or "-").upper(),
-        "cargo": _cargo_category(politician.get("role", "")),
-        "uf": extract_uf(politician.get("role", "")),
+        "cargo": _cargo_category(role_for_display),
+        "uf": extract_uf(role_for_display),
     }
 
 
@@ -147,7 +162,7 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
 
     cards = []
     for categoria in _CATEGORIAS:
-        count = sum(1 for p in POLITICIANS if p.get("source") in categoria["sources"])
+        count = sum(1 for p in POLITICIANS if categoria["matches"](p))
         cards.append(
             f"""
             <a class="category-card" href="{categoria['key']}.html">
@@ -177,8 +192,9 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
 
 
 def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
-    politicians = [p for p in POLITICIANS if p.get("source") in categoria["sources"]]
-    summaries = [_politician_summary(p) for p in politicians]
+    use_candidacy_role = categoria.get("use_candidacy_role", False)
+    politicians = [p for p in POLITICIANS if categoria["matches"](p)]
+    summaries = [_politician_summary(p, use_candidacy_role) for p in politicians]
     summaries.sort(key=lambda p: p["name"])
 
     parties = sorted({p["party"] for p in summaries if p["party"] and p["party"] != "-"})
