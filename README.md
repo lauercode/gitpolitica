@@ -20,21 +20,9 @@ python3 main.py
 
 ### Como funciona a lista de políticos agora
 
-`config.py` mescla três fontes, nessa ordem de prioridade:
-1. `MANUAL_POLITICIANS`: cargos que não vêm do Congresso (Presidente,
-   ministros do STF, governadores). Mantidos à mão porque não existe
-   uma API única que cubra todos os Poderes.
-2. `data/politicians_camara.json`: gerado por `sync_politicians.py` a
-   partir da API de Dados Abertos da Câmara (`dadosabertos.camara.leg.br`,
-   JSON paginado). Cobre automaticamente ~513 deputados em exercício.
-3. `data/politicians_senado.json`: gerado a partir da API do Senado
-   (`legis.senado.leg.br/dadosabertos`, XML). Cobre ~81 parlamentares
-   em exercício (titulares e suplentes atualmente exercendo o mandato).
-
-Em caso de conflito de slug, a entrada de prioridade mais alta vence —
-por exemplo, se um nome aparecer tanto na lista manual quanto na da
-Câmara, a manual prevalece; um nome que aparecesse tanto na Câmara
-quanto no Senado (caso raro) ficaria com a versão da Câmara.
+Ver a seção "Remoção do MANUAL_POLITICIANS" mais abaixo — hoje
+`config.py` mescla só Câmara, Senado e TSE (sem lista manual
+embutida no código).
 
 Isso vai:
 1. Criar (ou reaproveitar) o repositório Git em `data/repo/`
@@ -844,6 +832,45 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Remoção do MANUAL_POLITICIANS
+
+O projeto não tem mais nenhuma lista de políticos embutida no código.
+Câmara, Senado e TSE já cobrem todo mundo que é candidato ou está em
+exercício — quem não é nenhum dos dois (um ex-presidente inelegível,
+um ministro do STF sem candidatura) simplesmente deixa de ser
+monitorado, sem precisar de uma lista de exclusão manual.
+
+**O que isso quebraria sem tratamento**: nomes de urna de uma palavra
+só (ex.: "Lula") não geram alias automático (ver bugs #8/#10) — então
+tirar a lista manual faria o sistema parar de reconhecer menções pelo
+apelido curto de quem só tinha esse alias curado à mão, restando só o
+nome civil completo.
+
+**Correção**: `extra_aliases.py`, um arquivo pequeno que só
+**enriquece** aliases de quem já existe via alguma fonte — não recria
+a pessoa do zero, não define papel/partido/nada. Cada regra é uma
+palavra distintiva (`name_contains`) que precisa aparecer no nome da
+pessoa. Testado: com Lula e Tarcísio vindos do TSE (sample sintético),
+os aliases curtos ("Lula", "Tarcísio") voltam a funcionar no matcher.
+
+**Migração pro repositório de dados já existente**: rode
+`remove_orphaned_politicians.py` pra apagar os arquivos de quem não
+corresponde mais a ninguém na lista atual (ex.: `jair-bolsonaro.md`,
+`flavio-dino.md`) — testado nos dois casos reais já encontrados em
+produção (arquivo rastreado pelo Git normalmente, e arquivo existente
+no disco mas nunca commitado).
+
+```bash
+cd data/repo
+python3 ../../remove_orphaned_politicians.py . --dry-run   # confira antes
+python3 ../../remove_orphaned_politicians.py .             # de verdade
+git push
+```
+
+A categoria "Outros cargos" do site foi removida (ficaria sempre
+vazia sem fonte manual) — agora só existem "Em exercício" e
+"Candidatos à Eleição 2026".
+
 ## Candidatos com mandato aparecem em duas categorias
 
 Quem já tem mandato (deputado, senador, ou um cargo especial como
@@ -898,7 +925,8 @@ funcionaram como esperado.
 
 ## Estrutura do projeto
 
-- `config.py` — mescla políticos manuais + Câmara + Senado, e as fontes RSS
+- `config.py` — mescla Câmara + Senado + TSE (sem lista manual), e as fontes RSS
+- `extra_aliases.py` — apelidos extras curados pra quem tem nome de urna de uma palavra só
 - `camara_api.py` — integração com a API de Dados Abertos da Câmara (JSON)
 - `senado_api.py` — integração com a API de Dados Abertos do Senado (XML)
 - `sync_politicians.py` — sincroniza deputados e senadores a partir das APIs
@@ -911,7 +939,8 @@ funcionaram como esperado.
 - `repo_writer.py` — grava as notícias como commits reais no Git (organizados em subpastas por UF)
 - `migrate_to_uf_folders.py` — migração única para reorganizar um repositório de dados existente (achatado) em subpastas por UF
 - `cleanup_duplicate_slugs.py` — remove arquivos duplicados deixados pelo bug de slug com acento corrompido
-- `site_generator.py` — gera o site estático HTML: index com 3 categorias + páginas com busca/filtro (nome/partido/cargo/UF) e paginação client-side
+- `remove_orphaned_politicians.py` — remove arquivos de quem não corresponde mais a ninguém na lista atual
+- `site_generator.py` — gera o site estático HTML: index com 2 categorias + páginas com busca/filtro (nome/partido/cargo/UF) e paginação client-side
 - `main.py` — orquestra o pipeline completo de notícias (`--backend alias|spacy`, `--summarize`)
 - `git_events.py` — merge real para troca de partido + tags anotadas para marcos formais
 - `record_event.py` — CLI manual/curada para registrar esses eventos com confirmação

@@ -102,12 +102,6 @@ _CATEGORIAS = [
         # Senado). Nas outras categorias, o "role" normal já é o certo.
         "use_candidacy_role": True,
     },
-    {
-        "key": "outros",
-        "matches": lambda p: p.get("source") == "manual",
-        "titulo": "Outros cargos",
-        "descricao": "Presidência, ministros do STF, governadores e demais cargos especiais.",
-    },
 ]
 
 _PAGE_SIZE = 50

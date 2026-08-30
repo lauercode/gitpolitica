@@ -145,10 +145,25 @@ def extract_candidate_names(text: str) -> list[str]:
 # reais de erro de digitação (a primeira letra quase nunca muda), ao
 # custo de não pegar um typo bem no início do nome — uma troca
 # aceitável, já validada com os testes de regressão existentes.
+#
+# IMPORTANTE: políticos com source == "tse" são EXCLUÍDOS da camada
+# fuzzy inteiramente. Bug real encontrado em produção: mesmo o fuzzy
+# multi-palavra (threshold 0.85), seguro na escala pequena de Câmara/
+# Senado (~600 pessoas, onde foi validado com casos reais como "Artur
+# Lira"/"Bia Kikis"), começa a colidir por acaso com nomes de urna
+# aleatórios na escala do TSE (~40 mil candidatos) — a chance de UM
+# candidato do texto parecer "por acaso" com ALGUM dos 40 mil nomes
+# cresce demais. Candidatos do TSE só são encontrados por
+# correspondência EXATA (find_mentioned_exact), que não tem esse
+# problema de colisão por semelhança.
+_FONTES_ELEGIVEIS_PARA_FUZZY = {"camara", "senado"}
+
 
 def _build_fuzzy_index(use_aliases_only: bool) -> dict[str, list[tuple[str, dict]]]:
     index: dict[str, list[tuple[str, dict]]] = {}
     for politician in POLITICIANS:
+        if politician.get("source") not in _FONTES_ELEGIVEIS_PARA_FUZZY:
+            continue
         targets = politician["aliases"] if use_aliases_only else (
             [politician["name"]] + politician["aliases"]
         )

@@ -1,21 +1,24 @@
 """
 Configuração do GitPolítica MVP.
 
-POLITICIANS combina quatro fontes:
-  1. MANUAL_POLITICIANS — cargos que não vêm de nenhuma API do Congresso
-     (Presidente, ministros do STF, governadores, etc.), mantidos à mão.
-  2. <REPO_DIR>/_meta/politicians_camara.json — deputados, gerado por
+POLITICIANS combina três fontes (o MANUAL_POLITICIANS foi removido —
+Câmara, Senado e TSE já cobrem todo mundo que é candidato ou está em
+exercício; quem não é nenhum dos dois, como um ex-presidente inelegível
+ou um ministro do STF sem candidatura, simplesmente não é mais
+monitorado):
+  1. <REPO_DIR>/_meta/politicians_camara.json — deputados, gerado por
      sync_politicians.py a partir da API da Câmara.
-  3. <REPO_DIR>/_meta/politicians_senado.json — senadores, gerado por
+  2. <REPO_DIR>/_meta/politicians_senado.json — senadores, gerado por
      sync_politicians.py a partir da API do Senado.
-  4. <REPO_DIR>/_meta/politicians_tse.json — candidatos à eleição de
+  3. <REPO_DIR>/_meta/politicians_tse.json — candidatos à eleição de
      2026 (Presidente, Governador, Senador, Deputado Federal, Deputado
      Estadual/Distrital), gerado a partir do dataset de Dados Abertos
-     do TSE. Esta fonte é MUITO maior que as outras três somadas
+     do TSE. Esta fonte é MUITO maior que as outras duas somadas
      (dezenas de milhares de registros) — ver tse_api.py.
 
-Se os arquivos gerados não existirem ainda (sync nunca rodou), o
-sistema funciona só com a lista manual.
+Se os arquivos gerados não existirem ainda (sync nunca rodou), a lista
+fica vazia — este projeto não tem mais nenhuma lista embutida no
+código.
 
 IMPORTANTE: os arquivos gerados moram DENTRO de REPO_DIR (o
 repositório de dados), não num caminho separado no repositório de
@@ -27,11 +30,17 @@ perderia silenciosamente em toda run que não chamasse
 sync_politicians.py — foi exatamente esse bug que motivou essa
 reestruturação (ver README, seção "Bug de persistência").
 
-Em caso de conflito de slug, a prioridade é: manual > Câmara > Senado >
-TSE. Além disso, candidatos do TSE cujo NOME normalizado já bate com
-alguém das outras três fontes são descartados (é a mesma pessoa — um
-deputado em exercício concorrendo à reeleição, por exemplo — e ela já
-tem um perfil mais informativo nas fontes de mandato).
+Em caso de conflito de slug, a prioridade é: Câmara > Senado > TSE.
+Além disso, candidatos do TSE cujo NOME normalizado já bate com alguém
+das outras duas fontes não ganham um arquivo/entrada separada — a
+entrada existente é marcada com `is_2026_candidate = True` e
+`candidacy_role` (ver docstring de load_politicians()), permitindo que
+o site liste a pessoa tanto como "em exercício" quanto como
+"candidato", sem duplicar o histórico Git dela.
+
+Aliases extras (curados manualmente, mas só o alias — não a pessoa
+inteira) para gente cujo nome de urna de uma palavra só não gera alias
+automático, ver extra_aliases.py.
 """
 
 import json
@@ -48,44 +57,6 @@ _CAMARA_PATH = os.path.join(REPO_DIR, "_meta", "politicians_camara.json")
 _SENADO_PATH = os.path.join(REPO_DIR, "_meta", "politicians_senado.json")
 _TSE_PATH = os.path.join(REPO_DIR, "_meta", "politicians_tse.json")
 
-MANUAL_POLITICIANS = [
-    {
-        "slug": "lula",
-        "name": "Luiz Inácio Lula da Silva",
-        "role": "Presidente da República",
-        "party": "PT",
-        "aliases": ["Lula", "Luiz Inácio Lula da Silva", "presidente Lula"],
-    },
-    {
-        "slug": "jair-bolsonaro",
-        "name": "Jair Bolsonaro",
-        "role": "Ex-Presidente",
-        "party": "PL",
-        "aliases": ["Bolsonaro", "Jair Bolsonaro", "ex-presidente Bolsonaro"],
-    },
-    {
-        "slug": "arthur-lira",
-        "name": "Arthur Lira",
-        "role": "Deputado Federal",
-        "party": "PP",
-        "aliases": ["Arthur Lira", "Lira"],
-    },
-    {
-        "slug": "flavio-dino",
-        "name": "Flávio Dino",
-        "role": "Ministro do STF",
-        "party": "-",
-        "aliases": ["Flávio Dino", "ministro Dino"],
-    },
-    {
-        "slug": "tarcisio-de-freitas",
-        "name": "Tarcísio de Freitas",
-        "role": "Governador de SP",
-        "party": "Republicanos",
-        "aliases": ["Tarcísio de Freitas", "Tarcísio", "governador Tarcísio"],
-    },
-]
-
 
 def _load_json_list(path: str) -> list[dict]:
     if not os.path.exists(path):
@@ -94,30 +65,49 @@ def _load_json_list(path: str) -> list[dict]:
         return json.load(f)
 
 
+def _apply_extra_aliases(politicians: list[dict]) -> None:
+    """
+    Enriquece (in-place) os aliases de quem bate com alguma regra de
+    extra_aliases.py — não cria ninguém novo, só adiciona alias em
+    quem já existe via alguma fonte. Ver extra_aliases.py.
+    """
+    import re
+    from extra_aliases import EXTRA_ALIASES
+    from text_utils import normalize
+
+    for politician in politicians:
+        norm_name = normalize(politician["name"])
+        for rule in EXTRA_ALIASES:
+            pattern = rf"\b{re.escape(rule['name_contains'])}\b"
+            if re.search(pattern, norm_name):
+                existing = set(politician["aliases"])
+                for alias in rule["aliases"]:
+                    if alias not in existing:
+                        politician["aliases"].append(alias)
+                        existing.add(alias)
+
+
 def load_politicians() -> list[dict]:
     """
-    Mescla MANUAL_POLITICIANS + Câmara + Senado + TSE, nessa ordem de
-    prioridade. Um candidato do TSE cujo nome já existe nas três
-    primeiras fontes NÃO ganha um arquivo/entrada separada (mesma
-    pessoa — um arquivo duplicado reintroduziria o problema que a
-    deduplicação por nome resolveu). Em vez disso, a entrada já
-    existente (de mandato) é marcada com `is_2026_candidate = True` e
-    `candidacy_role` (o cargo ao qual está concorrendo) — assim
-    site_generator.py consegue listar essa pessoa tanto no card de
-    "Em exercício"/"Outros" quanto no de "Candidatos 2026", sem
-    duplicar o histórico Git dela.
+    Mescla Câmara + Senado + TSE, nessa ordem de prioridade. Um
+    candidato do TSE cujo nome já existe nas duas primeiras fontes NÃO
+    ganha um arquivo/entrada separada (mesma pessoa — um arquivo
+    duplicado reintroduziria o problema que a deduplicação por nome
+    resolveu). Em vez disso, a entrada já existente (de mandato) é
+    marcada com `is_2026_candidate = True` e `candidacy_role` (o cargo
+    ao qual está concorrendo) — assim site_generator.py consegue listar
+    essa pessoa tanto no card de "Em exercício" quanto no de
+    "Candidatos 2026", sem duplicar o histórico Git dela.
 
-    Cada político é marcado com "source" (manual/camara/senado/tse) —
-    usado por matcher.py para excluir o TSE (dezenas de milhares de
+    Cada político é marcado com "source" (camara/senado/tse) — usado
+    por matcher.py para excluir o TSE (dezenas de milhares de
     registros) da camada de fuzzy matching multi-palavra, que só é
     segura em escala menor e curada (bug real de colisão em produção).
     """
     from text_utils import normalize
 
     merged = []
-    for politician in MANUAL_POLITICIANS:
-        merged.append({**politician, "source": "manual", "is_2026_candidate": False})
-    seen_slugs = {p["slug"] for p in merged}
+    seen_slugs: set[str] = set()
 
     for source_path, source_name in ((_CAMARA_PATH, "camara"), (_SENADO_PATH, "senado")):
         for politician in _load_json_list(source_path):
@@ -137,10 +127,7 @@ def load_politicians() -> list[dict]:
 
         # Pode bater por slug (caso mais comum — o slug vem do mesmo
         # nome) OU só por nome (slugs gerados de formas ligeiramente
-        # diferentes pra mesma pessoa). Bug real: uma versão anterior
-        # só marcava is_2026_candidate no caso "só por nome", porque o
-        # caso "por slug" tinha um `continue` antecipado que pulava
-        # essa marcação inteira.
+        # diferentes pra mesma pessoa).
         existing = slug_to_politician.get(politician["slug"]) or seen_names.get(norm_name)
 
         if existing is not None:
@@ -152,6 +139,8 @@ def load_politicians() -> list[dict]:
         merged.append(new_entry)
         slug_to_politician[politician["slug"]] = new_entry
         seen_names[norm_name] = new_entry
+
+    _apply_extra_aliases(merged)
 
     return merged
 
