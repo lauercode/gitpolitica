@@ -21,6 +21,7 @@ antigo, "achatado").
 """
 
 import os
+import re
 import subprocess
 from datetime import datetime, timezone
 
@@ -184,6 +185,50 @@ def get_log(politician: dict, repo_dir: str = REPO_DIR) -> list[dict]:
         commit_hash, date, message = line.split("|", 2)
         log.append({"hash": commit_hash, "date": date, "message": message})
     return log
+
+
+_ENTRY_PATTERN = re.compile(
+    r"- \*\*\[(?P<date>[^\]]+)\]\*\* (?P<headline>.+?)\n"
+    r"  _fonte: \[(?P<source_name>[^\]]+)\]\((?P<source_url>[^)]+)\)_"
+)
+
+
+def get_historico_entries(politician: dict, repo_dir: str = REPO_DIR) -> list[dict]:
+    """
+    Lê o arquivo .md do político diretamente e extrai cada entrada de
+    histórico (data, manchete, fonte E link) — diferente de get_log(),
+    que só lê metadados do commit (hash/data/mensagem) e não tem o link
+    da notícia, já que o link mora no CONTEÚDO do arquivo, não na
+    mensagem do commit. Ordenado do mais recente pro mais antigo.
+    """
+    relative_path = get_politician_relative_path(politician)
+    filepath = os.path.join(repo_dir, relative_path)
+    if not os.path.exists(filepath):
+        return []
+
+    with open(filepath, encoding="utf-8") as f:
+        content = f.read()
+
+    entries = [m.groupdict() for m in _ENTRY_PATTERN.finditer(content)]
+    entries.reverse()  # arquivo tem ordem cronológica; queremos mais recente primeiro
+    return entries
+
+
+def get_all_commit_counts(repo_dir: str = REPO_DIR) -> dict[str, int]:
+    """
+    Conta quantos commits tocaram cada arquivo de político, com UMA
+    chamada de `git log` pro repositório inteiro — muito mais rápido
+    que chamar get_log() individualmente pra cada um (inviável em
+    escala com dezenas de milhares de políticos). Usado pelas páginas
+    de categoria do site pra permitir ordenar por número de notícias.
+    """
+    output = _run_git(["log", "--pretty=format:", "--name-only"], cwd=repo_dir)
+    counts: dict[str, int] = {}
+    for line in output.split("\n"):
+        line = line.strip()
+        if line.endswith(".md"):
+            counts[line] = counts.get(line, 0) + 1
+    return counts
 
 
 if __name__ == "__main__":

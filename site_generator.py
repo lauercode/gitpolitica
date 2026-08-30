@@ -28,7 +28,7 @@ sob demanda).
 import json
 import os
 from config import POLITICIANS, REPO_DIR, SITE_DIR
-from repo_writer import get_log
+from repo_writer import get_log, get_historico_entries, get_all_commit_counts, get_politician_relative_path
 from text_utils import extract_uf
 
 STYLE = """
@@ -125,9 +125,11 @@ def _cargo_category(role: str) -> str:
     return role  # fallback: usa o valor cru se não reconhecer nenhum padrão
 
 
-def _politician_summary(politician: dict, use_candidacy_role: bool = False) -> dict:
+def _politician_summary(politician: dict, commit_counts: dict, use_candidacy_role: bool = False) -> dict:
     """
-    Resumo leve (sem tocar no Git) usado nas páginas de categoria. Se
+    Resumo leve usado nas páginas de categoria. `commit_counts` vem de
+    get_all_commit_counts() — UMA chamada de git log pro repositório
+    inteiro, não uma por político (inviável em escala). Se
     `use_candidacy_role` e a pessoa tiver uma candidatura registrada
     (`candidacy_role` — quem já tem mandato E está concorrendo em
     2026), usa o cargo/UF da CANDIDATURA em vez do mandato atual, já
@@ -137,12 +139,15 @@ def _politician_summary(politician: dict, use_candidacy_role: bool = False) -> d
     if use_candidacy_role and politician.get("candidacy_role"):
         role_for_display = politician["candidacy_role"]
 
+    relative_path = get_politician_relative_path(politician)
+
     return {
         "slug": politician["slug"],
         "name": politician["name"],
         "party": (politician.get("party") or "-").upper(),
         "cargo": _cargo_category(role_for_display),
         "uf": extract_uf(role_for_display),
+        "commits": commit_counts.get(relative_path, 0),
     }
 
 
@@ -188,7 +193,9 @@ def generate_index(site_dir: str = SITE_DIR) -> None:
 def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
     use_candidacy_role = categoria.get("use_candidacy_role", False)
     politicians = [p for p in POLITICIANS if categoria["matches"](p)]
-    summaries = [_politician_summary(p, use_candidacy_role) for p in politicians]
+
+    commit_counts = get_all_commit_counts(REPO_DIR)
+    summaries = [_politician_summary(p, commit_counts, use_candidacy_role) for p in politicians]
     summaries.sort(key=lambda p: p["name"])
 
     parties = sorted({p["party"] for p in summaries if p["party"] and p["party"] != "-"})
@@ -223,6 +230,11 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
       <option value="">Todos os estados</option>
       {uf_options}
     </select>
+    <select id="sort-by" onchange="applyFilters()">
+      <option value="name-asc">Nome (A-Z)</option>
+      <option value="commits-desc">Mais notícias primeiro</option>
+      <option value="commits-asc">Menos notícias primeiro</option>
+    </select>
     <button onclick="clearFilters()">Limpar filtros</button>
   </div>
 
@@ -247,6 +259,7 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
       const party = document.getElementById('filter-party').value;
       const cargo = document.getElementById('filter-cargo').value;
       const uf = document.getElementById('filter-uf').value;
+      const sortBy = document.getElementById('sort-by').value;
 
       filtered = DATA.filter(p => {{
         const matchesName = !query || p.name.toLowerCase().includes(query);
@@ -255,6 +268,14 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
         const matchesUf = !uf || p.uf === uf;
         return matchesName && matchesParty && matchesCargo && matchesUf;
       }});
+
+      if (sortBy === 'commits-desc') {{
+        filtered.sort((a, b) => b.commits - a.commits);
+      }} else if (sortBy === 'commits-asc') {{
+        filtered.sort((a, b) => a.commits - b.commits);
+      }} else {{
+        filtered.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      }}
 
       currentPage = 1;
       render();
@@ -265,6 +286,7 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
       document.getElementById('filter-party').value = '';
       document.getElementById('filter-cargo').value = '';
       document.getElementById('filter-uf').value = '';
+      document.getElementById('sort-by').value = 'name-asc';
       applyFilters();
     }}
 
@@ -283,7 +305,7 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
       container.innerHTML = pageItems.map(p => `
         <div class="politician-card">
           <a href="${{p.slug}}.html">${{p.name}}</a>
-          <div class="meta">${{p.cargo}} (${{p.uf}}) · ${{p.party}}</div>
+          <div class="meta">${{p.cargo}} (${{p.uf}}) · ${{p.party}} · ${{p.commits}} commit(s)</div>
         </div>
       `).join('');
 
@@ -306,18 +328,22 @@ def generate_category_page(categoria: dict, site_dir: str = SITE_DIR) -> None:
         f.write(html)
 
 
-def generate_politician_page(politician: dict, site_dir: str = SITE_DIR) -> None:
-    log = get_log(politician)
-    commits_html = "".join(
-        f"""
+def _render_historico_entry(entry: dict) -> str:
+    return f"""
         <div class="commit">
-          <div class="commit-msg">{entry['message']}</div>
-          <div class="commit-hash">{entry['hash'][:8]}</div>
-          <div class="commit-date">{entry['date']}</div>
+          <div class="commit-msg">{entry['headline']}</div>
+          <div class="commit-date">{entry['date']} · <a href="{entry['source_url']}" target="_blank" rel="noopener">{entry['source_name']}</a></div>
         </div>
         """
-        for entry in log
-    ) or "<p>Nenhum commit registrado ainda.</p>"
+
+
+def generate_politician_page(politician: dict, site_dir: str = SITE_DIR) -> None:
+    total_commits = len(get_log(politician))
+    entries = get_historico_entries(politician)
+
+    entries_html = "".join(_render_historico_entry(e) for e in entries) or (
+        "<p>Nenhuma notícia registrada ainda.</p>"
+    )
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-br">
@@ -326,8 +352,9 @@ def generate_politician_page(politician: dict, site_dir: str = SITE_DIR) -> None
   <a class="back-link" href="index.html">&larr; voltar</a>
   <h1>{politician['name']}</h1>
   <p class="meta">{politician['role']} · {politician['party']}</p>
-  <h2>Histórico de commits</h2>
-  {commits_html}
+  <p class="meta">{_fmt_br(total_commits)} commit(s) no histórico</p>
+  <h2>Histórico de notícias</h2>
+  {entries_html}
 </body>
 </html>"""
 

@@ -832,6 +832,39 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Ajustes de usabilidade (contagem, link, ordenação, sem trava de segurança)
+
+Quatro mudanças pedidas depois de observar o site em produção:
+
+1. **Trava de segurança removida** (`main.py`): o limite de "pula a
+   notícia se bater em mais de 3 políticos" foi removido — estava
+   descartando notícias legítimas. O problema que ela mitigava (uma
+   notícia batendo em muita gente por engano, ver bug #10) continua
+   possível em teoria; fica como ponto em aberto pra resolver de outra
+   forma depois, em vez de descartar notícia de verdade.
+
+2. **Contagem de commits na página do político**: `repo_writer.py`
+   ganhou `get_all_commit_counts()`, que conta quantos commits tocaram
+   cada arquivo com **uma única chamada** de `git log` pro repositório
+   inteiro (não uma por político — inviável com dezenas de milhares de
+   candidatos). Usado tanto na página individual (contagem total)
+   quanto nas páginas de categoria.
+
+3. **Ordenação por número de commits**: dropdown novo nas páginas de
+   categoria (Nome A-Z / Mais notícias / Menos notícias). Testado
+   rodando o JavaScript de verdade em Node.js com um DOM simulado —
+   os três modos ordenam corretamente.
+
+4. **Link de cada notícia na página do político**: o link sempre
+   esteve salvo no arquivo `.md` (na linha `_fonte: [Nome](URL)_`),
+   mas só no CONTEÚDO do arquivo — a mensagem do commit não inclui a
+   URL, só o nome da fonte. `get_log()` (que lê metadado do commit)
+   nunca teve acesso a isso. `repo_writer.get_historico_entries()` lê
+   o arquivo diretamente e extrai cada entrada (data, manchete, nome
+   da fonte E link), usado agora na página do político em vez do log
+   de commits cru. Funciona também para notícias já commitadas antes
+   dessa mudança, já que o formato do arquivo sempre incluiu o link.
+
 ## Remoção do MANUAL_POLITICIANS
 
 O projeto não tem mais nenhuma lista de políticos embutida no código.
