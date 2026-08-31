@@ -150,22 +150,48 @@ POLITICIANS = load_politicians()
 # Fontes de notícias (RSS).
 
 RSS_SOURCES = [
+    # EBC - Agência Brasil
     {
         "name": "Agência Brasil - Política",
         "url": "http://agenciabrasil.ebc.com.br/rss/politica/feed.xml",
     },
     {
+        "name": "Agência Brasil - Últimas Notícias",
+        "url": "http://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml",
+    },
+    # Câmara dos Deputados
+    {
         "name": "Agência Câmara - Política",
         "url": "https://www.camara.leg.br/noticias/rss/dinamico/POLITICA",
     },
     {
+        "name": "Agência Câmara - Últimas Notícias",
+        "url": "https://www.camara.leg.br/noticias/rss/ultimas-noticias",
+    },
+    {
+        "name": "Agência Câmara - Eleições",
+        "url": "https://www.camara.leg.br/noticias/rss/dinamico/ELEICOES",
+    },
+    # EBC - Radioagência Nacional
+    {
+        "name": "Radioagência Nacional - Política",
+        "url": "https://agenciabrasil.ebc.com.br/radioagencia-nacional/rss/politica/feed.xml",
+    },
+    {
+        "name": "Radioagência Nacional - Últimas Notícias",
+        "url": "https://agenciabrasil.ebc.com.br/radioagencia-nacional/rss/ultimasnoticias/feed.xml",
+    },
+    # G1
+    {
         "name": "G1 - Política:",
         "url": "https://g1.globo.com/dynamo/politica/rss2.xml",
     },
+    # Folha de S.Paulo
     {
         "name": "Folha de S.Paulo - Em cima da hora",
         "url": "https://feeds.folha.uol.com.br/emcimadahora/rss091.xml",
     },
+    # Gazeta do Povo
     {
         "name": "Gazeta do Povo - República",
         "url": "https://www.gazetadopovo.com.br/feed/rss/republica.xml",
@@ -178,6 +204,7 @@ RSS_SOURCES = [
         "name": "Gazeta do Povo - Governo Federal",
         "url": "https://www.gazetadopovo.com.br/feed/rss/tudo-sobre/governo-federal.xml",
     },
+    # BBC Brasil
     {
         "name": "BBC Brasil - Primeira Página",
         "url": "http://www.bbc.co.uk/portuguese/index.xml",
@@ -185,5 +212,119 @@ RSS_SOURCES = [
     {
         "name": "BBC Brasil - Brasil",
         "url": "http://www.bbc.co.uk/portuguese/topicos/brasil/index.xml",
+    },
+    # UOL Notícias
+    {
+        "name": "UOL Notícias",
+        "url": "https://rss.uol.com.br/feed/noticias.xml",
+    },
+    # G1 - Regiões (Estados)
+    {
+        "name": "G1 - Regiões: Acre",
+        "url": "https://g1.globo.com/dynamo/ac/acre/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Alagoas",
+        "url": "https://g1.globo.com/dynamo/al/alagoas/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Amapá",
+        "url": "https://g1.globo.com/dynamo/ap/amapa/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Amazonas",
+        "url": "https://g1.globo.com/dynamo/am/amazonas/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Bahia",
+        "url": "https://g1.globo.com/dynamo/bahia/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Ceará",
+        "url": "https://g1.globo.com/dynamo/ceara/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Distrito Federal",
+        "url": "https://g1.globo.com/dynamo/distrito-federal/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Espírito Santo",
+        "url": "https://g1.globo.com/dynamo/espirito-santo/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Goiás",
+        "url": "https://g1.globo.com/dynamo/goias/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Maranhão",
+        "url": "https://g1.globo.com/dynamo/ma/maranhao/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Mato Grosso",
+        "url": "https://g1.globo.com/dynamo/mato-grosso/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Mato Grosso do Sul",
+        "url": "https://g1.globo.com/dynamo/mato-grosso-do-sul/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Minas Gerais",
+        "url": "https://g1.globo.com/dynamo/minas-gerais/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Pará",
+        "url": "https://g1.globo.com/dynamo/pa/para/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Paraíba",
+        "url": "https://g1.globo.com/dynamo/pb/paraiba/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Paraná",
+        "url": "https://g1.globo.com/dynamo/pr/parana/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Pernambuco",
+        "url": "https://g1.globo.com/dynamo/pernambuco/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Piauí",
+        "url": " https://g1.globo.com/dynamo/pi/piaui/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Rio de Janeiro",
+        "url": "https://g1.globo.com/dynamo/rio-de-janeiro/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Rio Grande do Norte",
+        "url": "https://g1.globo.com/dynamo/rn/rio-grande-do-norte/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Rio Grande do Sul",
+        "url": "https://g1.globo.com/dynamo/rs/rio-grande-do-sul/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Rondônia",
+        "url": "https://g1.globo.com/dynamo/ro/rondonia/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Roraima",
+        "url": "https://g1.globo.com/dynamo/rr/roraima/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Santa Catarina",
+        "url": "https://g1.globo.com/dynamo/sc/santa-catarina/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: São Paulo",
+        "url": "https://g1.globo.com/dynamo/sao-paulo/rss2.xml ",
+    },
+    {
+        "name": "G1 - Regiões: Sergipe",
+        "url": "https://g1.globo.com/dynamo/se/sergipe/rss2.xml",
+    },
+    {
+        "name": "G1 - Regiões: Tocantins",
+        "url": "https://g1.globo.com/dynamo/to/tocantins/rss2.xml",
     },
 ]
