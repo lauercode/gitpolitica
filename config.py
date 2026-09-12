@@ -70,6 +70,10 @@ def _apply_extra_aliases(politicians: list[dict]) -> None:
     Enriquece (in-place) os aliases de quem bate com alguma regra de
     extra_aliases.py — não cria ninguém novo, só adiciona alias em
     quem já existe via alguma fonte. Ver extra_aliases.py.
+
+    Suporta "name_contains" (palavra inteira presente no nome) e
+    "exact_name" (nome exato — mais seguro quando o alias extra é só
+    o primeiro nome, que sozinho poderia bater em mais de uma pessoa).
     """
     import re
     from extra_aliases import EXTRA_ALIASES
@@ -78,8 +82,13 @@ def _apply_extra_aliases(politicians: list[dict]) -> None:
     for politician in politicians:
         norm_name = normalize(politician["name"])
         for rule in EXTRA_ALIASES:
-            pattern = rf"\b{re.escape(rule['name_contains'])}\b"
-            if re.search(pattern, norm_name):
+            if "exact_name" in rule:
+                matched = norm_name == normalize(rule["exact_name"])
+            else:
+                pattern = rf"\b{re.escape(rule['name_contains'])}\b"
+                matched = bool(re.search(pattern, norm_name))
+
+            if matched:
                 existing = set(politician["aliases"])
                 for alias in rule["aliases"]:
                     if alias not in existing:
@@ -326,5 +335,10 @@ RSS_SOURCES = [
     {
         "name": "G1 - Regiões: Tocantins",
         "url": "https://g1.globo.com/dynamo/to/tocantins/rss2.xml",
+    },
+    # Valor Econômico
+    {
+        "name": "Valor Econômico",
+        "url": "https://pox.globo.com/rss/valor",
     },
 ]

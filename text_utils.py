@@ -42,23 +42,49 @@ def extract_surname(full_name: str) -> str:
 # Montenegro, Maria Fernanda Cândido). Bug real encontrado em produção.
 _PREFIXOS_TITULO_PATENTE = {
     "coronel", "capitao", "sargento", "delegado", "delegada", "major",
-    "tenente", "cabo", "soldado", "doutor", "doutora", "professor",
-    "professora", "pastor", "pastora", "padre", "policial", "juiz",
-    "juiza", "promotor", "promotora", "advogado", "advogada",
+    "tenente", "cabo", "soldado", "doutor", "doutora", "dr", "dra",
+    "professor", "professora", "pastor", "pastora", "padre", "policial",
+    "juiz", "juiza", "promotor", "promotora", "advogado", "advogada",
+    "escritor", "escritora", "cantor", "cantora", "radialista",
+    "empresario", "empresaria", "medico", "medica", "enfermeiro",
+    "enfermeira", "bombeiro", "motorista", "agricultor", "agricultora",
+    "pescador", "pescadora", "missionario", "missionaria", "apostolo",
+    "bispo", "frei", "irmao", "irma", "engenheiro", "engenheira",
+    "dentista", "veterinario", "veterinaria", "psicologo", "psicologa",
 }
 
 
 def has_title_prefix(full_name: str) -> bool:
     """
-    True se o primeiro token do nome for um título/patente conhecido —
-    sinal de que extract_surname() não deve ser usado para gerar um
-    alias automático (o resultado seria um primeiro nome comum, não um
-    sobrenome distintivo).
+    True se o primeiro token do nome for um título/patente conhecido.
+    Ver has_no_real_surname() — essa função sozinha não diferencia
+    "Coronel Fernanda" (sem sobrenome de verdade) de "Escritor Augusto
+    Cury" (tem sobrenome de verdade, só precedido de uma profissão) —
+    use has_no_real_surname() pra decidir se gera alias de sobrenome.
     """
     tokens = full_name.strip().split()
     if not tokens:
         return False
     return normalize(tokens[0]) in _PREFIXOS_TITULO_PATENTE
+
+
+def has_no_real_surname(full_name: str) -> bool:
+    """
+    True só quando, depois de remover um título/profissão reconhecido
+    do início, sobra UM token só — sinal de que não existe sobrenome
+    de verdade (ex.: "Coronel Fernanda" -> sobra só "Fernanda", que é
+    primeiro nome, não sobrenome). Bug real corrigido: usar só
+    has_title_prefix() pra essa decisão bloqueava também casos como
+    "Escritor Augusto Cury", onde sobra "Augusto Cury" — um Nome +
+    Sobrenome de verdade — e o alias de sobrenome ("Cury") deveria
+    continuar sendo gerado normalmente.
+    """
+    tokens = full_name.strip().split()
+    if not tokens:
+        return False
+    if normalize(tokens[0]) not in _PREFIXOS_TITULO_PATENTE:
+        return False
+    return len(tokens[1:]) <= 1
 
 
 _UF_PATTERN = re.compile(r"\(([A-Z]{2})\)")

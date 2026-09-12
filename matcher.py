@@ -90,15 +90,28 @@ def _build_alias_index() -> dict[str, list[dict]]:
 
 
 _ALIAS_INDEX = _build_alias_index()
-_ALIAS_PATTERNS = {
-    alias: re.compile(rf"(?<![A-Za-zÀ-ÿ]){re.escape(alias)}(?![A-Za-zÀ-ÿ])", re.IGNORECASE)
-    for alias in _ALIAS_INDEX
-}
+_ALIAS_PATTERNS = {}
+for _alias in _ALIAS_INDEX:
+    # Aliases de UMA PALAVRA SÓ (sobrenomes/apelidos) ficam
+    # case-SENSITIVE — bug real: "Dias" (sobrenome de Hertz Dias e
+    # Benício Dias) também é uma palavra comuníssima do português
+    # ("dias" = "days"), e o casamento insensível a maiúsculas fazia
+    # qualquer ocorrência minúscula virar falso positivo. Aliases de
+    # nome completo continuam case-insensitive (mais específicos).
+    _flags = re.IGNORECASE if " " in _alias else 0
+    _ALIAS_PATTERNS[_alias] = re.compile(
+        rf"(?<![A-Za-zÀ-ÿ]){re.escape(_alias)}(?![A-Za-zÀ-ÿ])", _flags
+    )
 
 
 def find_mentioned_exact(text: str) -> list[dict]:
-    """Casamento exato por alias, com desambiguação por contexto quando necessário."""
-    mentioned = {}
+    """
+    Casamento exato por alias, com desambiguação por contexto e com
+    "o nome mais longo vence" quando duas correspondências se
+    sobrepõem apontando pra pessoas diferentes (ex.: "Flávio
+    Bolsonaro" não pode também contar como "Flávio" de outra pessoa).
+    """
+    raw_matches = []  # (start, end, politician)
     for alias, candidates in _ALIAS_INDEX.items():
         is_single_word = " " not in alias
         for match in _ALIAS_PATTERNS[alias].finditer(text):
@@ -110,7 +123,18 @@ def find_mentioned_exact(text: str) -> list[dict]:
                 is_single_word,
             )
             if resolved:
-                mentioned[resolved["slug"]] = resolved
+                raw_matches.append((match.start(), match.end(), resolved))
+
+    raw_matches.sort(key=lambda m: (m[1] - m[0]), reverse=True)
+    kept: list[tuple[int, int, dict]] = []
+    for start, end, politician in raw_matches:
+        contained = any(k_start <= start and end <= k_end for k_start, k_end, _ in kept)
+        if not contained:
+            kept.append((start, end, politician))
+
+    mentioned = {}
+    for _, _, politician in kept:
+        mentioned[politician["slug"]] = politician
     return list(mentioned.values())
 
 

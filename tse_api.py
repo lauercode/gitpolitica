@@ -35,7 +35,7 @@ import urllib.request
 import zipfile
 
 from camara_api import slugify
-from text_utils import extract_surname, has_title_prefix
+from text_utils import extract_surname, has_no_real_surname
 
 CANDIDATOS_ZIP_URL = (
     "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip"
@@ -197,7 +197,7 @@ def to_politician_dict(row: dict) -> dict:
         # título/patente, que já sabemos que engana a heurística).
         aliases.add(nome)
         surname = extract_surname(nome)
-        if surname != nome and len(surname) > 3 and not has_title_prefix(nome):
+        if surname != nome and len(surname) > 3 and not has_no_real_surname(nome):
             aliases.add(surname)
     # Nome de urna de UMA PALAVRA SÓ (ex: "Superman", "Duda", "Ana") não
     # vira alias sozinho — bug real encontrado em produção: é comum

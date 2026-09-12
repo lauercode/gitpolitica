@@ -78,9 +78,21 @@ def _uf_of_politician(politician: dict) -> str | None:
     return match.group(1) if match else None
 
 
-def _first_name_of(politician: dict) -> str:
+def _non_surname_tokens_of(politician: dict) -> set[str]:
+    """
+    Todos os tokens do nome, exceto o último (sobrenome) — não só o
+    primeiro. Bug real encontrado em produção: para nomes de urna no
+    padrão "Profissão + Nome + Sobrenome" (ex.: "Escritor Augusto
+    Cury"), usar só o primeiro token ("Escritor") pra comparar contra
+    a palavra que precede uma menção de "Cury" faz o sistema descartar
+    "Augusto Cury" por engano — "Augusto" não bate com "Escritor", mas
+    bate perfeitamente com o segundo token do nome de verdade da
+    pessoa. Checar o conjunto inteiro (exceto o sobrenome) resolve
+    isso sem precisar reconhecer "Escritor" como título/profissão
+    numa lista fixa — funciona pra qualquer padrão parecido.
+    """
     tokens = politician["name"].strip().split()
-    return normalize(tokens[0]) if tokens else ""
+    return {normalize(t) for t in tokens[:-1]} if len(tokens) > 1 else set()
 
 
 def check_preceding_name(
@@ -92,19 +104,20 @@ def check_preceding_name(
 
     - Sem palavra capitalizada antes (ou início do texto): (False, None)
       — nada a decidir aqui, segue para as outras checagens.
-    - Palavra anterior bate com o primeiro nome de exatamente 1
-      candidato: (False, esse_candidato) — resolve direto, sinal forte.
-    - Palavra anterior bate com o primeiro nome de 2+ candidatos (raro):
+    - Palavra anterior bate com algum token do nome (exceto o
+      sobrenome) de exatamente 1 candidato: (False, esse_candidato) —
+      resolve direto, sinal forte.
+    - Palavra anterior bate com o nome de 2+ candidatos (raro):
       (False, None) — ainda ambíguo, segue para outras checagens.
-    - Palavra anterior NÃO bate com o primeiro nome de nenhum
-      candidato: (True, None) — descarta, é sobrenome de outra pessoa.
+    - Palavra anterior NÃO bate com o nome de nenhum candidato:
+      (True, None) — descarta, é sobrenome de outra pessoa.
     """
     preceding_match = _PRECEDING_NAME_PATTERN.search(text[:match_start])
     if not preceding_match:
         return False, None
 
     preceding_norm = normalize(preceding_match.group(1))
-    matching = [p for p in candidates if _first_name_of(p) == preceding_norm]
+    matching = [p for p in candidates if preceding_norm in _non_surname_tokens_of(p)]
 
     if len(matching) == 1:
         return False, matching[0]

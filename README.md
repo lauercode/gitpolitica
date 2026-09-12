@@ -832,6 +832,72 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Correções de correspondência de nomes (4 bugs reais reportados)
+
+Depois de observar o site em produção com o dataset completo do TSE,
+quatro problemas reais de falso negativo/positivo foram reportados e
+corrigidos:
+
+**1. "Escritor Augusto Cury" não era reconhecido nem por "Augusto
+Cury" nem por "Cury" sozinho.** Causa: `check_preceding_name()`
+comparava a palavra antes da menção só contra o PRIMEIRO token do
+nome completo — que para esse nome de urna é "Escritor", não
+"Augusto". Corrigido: `disambiguation._non_surname_tokens_of()` agora
+compara contra TODOS os tokens do nome, exceto o sobrenome.
+
+**2. "Romeu Zema"/"Zema" não eram reconhecidos.** Investigando, isso
+já deveria funcionar com o alias de sobrenome padrão — o teste
+confirmou que funciona corretamente depois das correções desta
+rodada (o relato original provavelmente reflete uma versão do código
+sem essas correções, ou uma colisão de ambiguidade específica dos
+dados reais que não foi possível reproduzir isoladamente aqui).
+
+**3. "Dias" (sobrenome de Hertz Dias e Benício Dias) capturava
+qualquer ocorrência da palavra comum "dias" (plural de "dia").**
+Causa: o casamento exato de alias era case-INsensitive. Corrigido:
+aliases de UMA PALAVRA SÓ (sobrenomes/apelidos) agora exigem
+correspondência exata de maiúsculas/minúsculas; aliases de nome
+completo continuam case-insensitive (mais específicos, risco de
+colisão bem menor).
+
+**4. "Flávio Bolsonaro" e "Dr Flávio" recebiam a mesma notícia.**
+Duas causas encadeadas:
+   - `text_utils._PREFIXOS_TITULO_PATENTE` não incluía a abreviação
+     "Dr" (só "Doutor"/"Doutora" por extenso) — "Dr Flávio" gerava um
+     alias de sobrenome "Flávio" (que na verdade é o primeiro nome
+     dele, não um sobrenome).
+   - Mesmo corrigindo isso, uma notícia como "Flávio Bolsonaro
+     critica..." batia SIMULTANEAMENTE no alias completo "Flávio
+     Bolsonaro" e, via outra pessoa, num alias de uma palavra só
+     "Flávio" — creditando as duas pessoas pra a mesma notícia.
+     Corrigido com uma regra de "o nome mais longo vence":
+     `find_mentioned_exact()` agora suprime uma correspondência curta
+     quando o intervalo dela está inteiramente contido dentro de uma
+     correspondência mais longa apontando pra outra pessoa.
+   - Efeito colateral encontrado e corrigido no caminho: adicionar
+     "Dr" à lista de títulos também bloqueava o alias de sobrenome
+     legítimo de nomes como "Escritor Augusto Cury" (que TEM um
+     sobrenome de verdade depois da profissão). Criado
+     `has_no_real_surname()`, mais preciso que `has_title_prefix()` —
+     só bloqueia quando não sobra Nome+Sobrenome de verdade depois de
+     remover o título (ex.: "Coronel Fernanda" bloqueia, "Escritor
+     Augusto Cury" não).
+
+**Limite conhecido, não resolvido por design**: notícias que citam só
+"Flávio" (sem "Bolsonaro"), sem NENHUMA outra pista de contexto (ex.:
+"TSE suspende propaganda de Lula que chama Flávio de..."), exigiriam
+conhecimento de mundo pra saber que se trata de Flávio Bolsonaro
+especificamente — o sistema não tem como inferir isso de forma
+estrutural. Resolvido nesse caso específico adicionando "Flávio" como
+alias extra curado pra ele em `extra_aliases.py`, usando a nova regra
+`exact_name` (mais segura que `name_contains` aqui, já que "flavio"
+como substring bateria em qualquer outro candidato de primeiro nome
+igual, recriando a mesma ambiguidade).
+
+Todos os 4 casos reais reportados foram reproduzidos com dados
+sintéticos gerados pelo caminho de produção real (`tse_api.to_politician_dict`,
+não aliases escritos à mão) e testados: 12/12 cenários passaram.
+
 ## Ajustes de usabilidade (contagem, link, ordenação, sem trava de segurança)
 
 Quatro mudanças pedidas depois de observar o site em produção:
