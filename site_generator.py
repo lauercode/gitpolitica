@@ -27,6 +27,7 @@ sob demanda).
 
 import json
 import os
+import re
 from config import POLITICIANS, REPO_DIR, SITE_DIR
 from repo_writer import get_log, get_historico_entries, get_all_commit_counts, get_politician_relative_path
 from text_utils import extract_uf
@@ -107,22 +108,42 @@ _CATEGORIAS = [
 _PAGE_SIZE = 50
 
 
+_CARGO_WRAPPER_PATTERN = re.compile(
+    r"^Candidato\(a\) a (.+?) \([A-Z]{2}\)(?: — Eleição \d{4})?$"
+)
+_UF_SUFFIX_PATTERN = re.compile(r"\s*\([A-Z]{2}\)\s*$")
+_GENERO_NEUTRO_PATTERN = re.compile(r"\((?:a|o)\)")
+
+
 def _cargo_category(role: str) -> str:
-    """Simplifica o campo 'role' (que pode incluir UF) numa categoria pro filtro."""
-    role_lower = role.lower()
-    if "ex-presidente" in role_lower:
-        return "Ex-Presidente"
-    if "presidente" in role_lower:
-        return "Presidente da República"
-    if "deputad" in role_lower:
-        return "Deputado(a) Federal"
-    if "senador" in role_lower:
-        return "Senador(a)"
-    if "ministr" in role_lower:
-        return "Ministro(a)"
-    if "governador" in role_lower:
-        return "Governador(a)"
-    return role  # fallback: usa o valor cru se não reconhecer nenhum padrão
+    """
+    Extrai o cargo diretamente do texto do "role" — sem lista fixa de
+    categorias possíveis. Bug real corrigido: a versão anterior fazia
+    correspondência por palavra-chave (`"deputad" in role_lower`), que
+    juntava "Deputado Federal" e "Deputado Estadual" na mesma
+    categoria por engano — sem opção nenhuma pra filtrar por estadual
+    especificamente. Como as opções do dropdown já são montadas a
+    partir do conjunto de valores distintos que essa função retorna
+    (`cargos = sorted({p["cargo"] for p in summaries})`), qualquer
+    cargo novo que apareça nos dados (Deputado Estadual, Distrital,
+    ou algo que surja no futuro) vira sua própria opção automaticamente,
+    sem precisar tocar em código nenhum.
+    """
+    role = role.strip()
+
+    # Formato do TSE: "Candidato(a) a <CARGO> (<UF>) — Eleição <ANO>".
+    match = _CARGO_WRAPPER_PATTERN.match(role)
+    if match:
+        cargo_text = match.group(1)
+    else:
+        # Formato Câmara/Senado: "<Cargo> (<UF>)" — remove só a UF.
+        cargo_text = _UF_SUFFIX_PATTERN.sub("", role).strip() or role
+
+    # Normaliza o marcador de gênero neutro "(a)"/"(o)" pra agrupar o
+    # mesmo cargo vindo de fontes diferentes (a Câmara escreve
+    # "Deputado(a) Federal", o TSE escreve só "Deputado Federal").
+    cargo_text = _GENERO_NEUTRO_PATTERN.sub("", cargo_text)
+    return " ".join(cargo_text.split())
 
 
 def _politician_summary(politician: dict, commit_counts: dict, use_candidacy_role: bool = False) -> dict:
