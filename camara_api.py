@@ -13,7 +13,7 @@ import re
 import unicodedata
 import urllib.request
 
-from text_utils import extract_surname, has_no_real_surname
+from text_utils import extract_surname, has_no_real_surname, is_blocked_alias_word, normalize
 
 API_URL = "https://dadosabertos.camara.leg.br/api/v2/deputados"
 
@@ -58,7 +58,7 @@ def to_politician_dict(record: dict) -> dict:
     uf = record.get("siglaUf", "")
     surname = extract_surname(name)
     aliases = [name]
-    if surname != name and len(surname) > 3 and not has_no_real_surname(name):
+    if surname != name and len(surname) > 3 and not has_no_real_surname(name) and not is_blocked_alias_word(normalize(surname)):
         aliases.append(surname)
     return {
         "slug": slugify(name),

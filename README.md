@@ -832,6 +832,58 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Bloqueio de palavras comuns e sobrenomes de figuras não monitoradas
+
+Depois das correções anteriores, três novos casos reais apareceram —
+todos da mesma família de problema (sobrenome real de um candidato
+que também é/soa como outra coisa), mas exigindo uma solução diferente
+das anteriores (case sensitivity e "nome mais longo vence" não eram
+suficientes aqui):
+
+**"Adilson Troca" e "Luci Moraes Coletivo Cidadania"**: os sobrenomes
+"Troca" e "Cidadania" são palavras comuníssimas do português
+(substantivo/verbo do dia a dia), e apareciam capitalizadas em
+manchetes só por estarem no início da frase (ex.: "Troca de fios de
+energia..."), não por serem nome de alguém — a correção de case
+sensitivity sozinha não resolve isso, porque o início de frase é
+capitalizado por regra gramatical normal, igual um nome próprio
+seria.
+
+**"Marcelo Moraes" (candidato) vs. Alexandre de Moraes (ministro do
+STF, não monitorado)**: um problema diferente — "Moraes" é um
+sobrenome real e comum, e boa parte do noticiário sobre "Moraes" no
+Brasil é sobre o ministro do STF, que nunca esteve na nossa lista de
+políticos (não é candidato nem parlamentar). Sem ele "existir" no
+sistema pra disputar a ambiguidade, toda menção a "Moraes" ia parar
+no único "Moraes" que exists mesmo — o candidato errado.
+
+**Correção**: `text_utils.py` ganhou duas listas de bloqueio,
+combinadas em `is_blocked_alias_word()`:
+- `_PALAVRAS_COMUNS_BLOQUEADAS`: palavras genéricas do português
+  (troca, cidadania, crise, cores, dias, tinha, contas, portas,
+  fortes, marcas) que nunca devem virar alias de correspondência,
+  mesmo sendo o sobrenome de alguém de verdade.
+- `_SOBRENOMES_FIGURAS_NAO_MONITORADAS`: sobrenomes de figuras
+  públicas muito conhecidas que nunca vão entrar no sistema (o caso
+  mais claro e enumerável: os 11 ministros do STF — moraes, mendonca,
+  fux, barroso, zanin, fachin, toffoli, nunes, cristiano). Lista
+  pequena, curada à mão, a revisar periodicamente conforme a
+  composição do STF mudar.
+
+Aplicado nos três geradores (`camara_api.py`, `senado_api.py`,
+`tse_api.py`): o alias de sobrenome só é gerado se o sobrenome não
+estiver bloqueado. **Importante**: tomei cuidado pra NÃO incluir
+sobrenomes brasileiros genuinamente comuns (Silva, Santos, Oliveira,
+Ferreira, Carvalho...) nessa lista — isso seria um exagero perigoso,
+bloqueando candidatos de verdade só por terem um sobrenome popular. A
+lista de palavras comuns é estritamente sobre vocabulário do dia a
+dia, não sobre frequência de sobrenome.
+
+Testado com as 17 manchetes reais reportadas (6 do caso Troca, 4 do
+caso Cidadania, 7 do caso Moraes): as 17 pararam de gerar falso
+positivo, e nomes completos ("Adilson Troca", "Marcelo Moraes")
+continuam sendo reconhecidos normalmente.
+
 ## Correções de correspondência de nomes (4 bugs reais reportados)
 
 Depois de observar o site em produção com o dataset completo do TSE,

@@ -53,6 +53,46 @@ _PREFIXOS_TITULO_PATENTE = {
     "dentista", "veterinario", "veterinaria", "psicologo", "psicologa",
 }
 
+# Palavras comuns do português que, mesmo capitalizadas (ex.: início de
+# frase/manchete), NÃO devem virar alias de correspondência — bugs
+# reais encontrados em produção: "Troca" (sobrenome de Adilson Troca)
+# e "Cidadania" (parte do nome de urna de outro candidato) capturavam
+# qualquer manchete começando com essas palavras comuns ("Troca de
+# fios de energia...", "Cidadania" como tema genérico de notícia),
+# mesmo com o casamento de uma palavra já sendo case-sensitive — o
+# problema persiste quando a palavra comum começa a frase (capitalizada
+# por regra gramatical normal, não por ser um nome próprio). Lista não
+# exaustiva — adicionar aqui conforme novos casos aparecerem.
+_PALAVRAS_COMUNS_BLOQUEADAS = {
+    "troca", "trocas", "cidadania", "crise", "cores", "dias", "tinha",
+    "contas", "portas", "fortes", "marcas",
+}
+
+# Sobrenomes de figuras públicas reais MUITO conhecidas que não são
+# candidatas nem estão em exercício em cargo eletivo (então nunca
+# entram na nossa lista de políticos monitorados) — mas que aparecem
+# constantemente no noticiário, criando colisão com candidatos
+# monitorados que por acaso têm o mesmo sobrenome. Caso real: Marcelo
+# Moraes (candidato) recebendo notícias sobre o ministro do STF
+# Alexandre de Moraes. Lista pequena e curada à mão — os ministros do
+# STF são o caso mais claro e enumerável (11 pessoas, composição muda
+# raramente). Revisar periodicamente.
+_SOBRENOMES_FIGURAS_NAO_MONITORADAS = {
+    "moraes", "mendonca", "fux", "barroso", "zanin", "fachin",
+    "toffoli", "nunes", "cristiano",
+}
+
+
+def is_blocked_alias_word(word: str) -> bool:
+    """
+    True se `word` (normalizado — sem acento, minúsculo) nunca deve
+    virar um alias de correspondência de uma palavra só, mesmo sendo
+    um sobrenome/nome de urna real de algum candidato — combina as
+    duas listas acima (palavras comuns do português + sobrenomes de
+    figuras públicas famosas não monitoradas).
+    """
+    return word in _PALAVRAS_COMUNS_BLOQUEADAS or word in _SOBRENOMES_FIGURAS_NAO_MONITORADAS
+
 
 def has_title_prefix(full_name: str) -> bool:
     """
