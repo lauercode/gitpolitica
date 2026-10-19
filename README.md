@@ -832,6 +832,77 @@ que resolveu na prática. `cleanup_duplicate_slugs.py` também foi
 atualizado para reportar o erro real do Git em vez de assumir sucesso
 silenciosamente.
 
+## Nomes do TSE em caixa alta e nomes de urna de uma palavra só
+
+**Sintoma real** (rodando o matcher com os dados de produção): a
+manchete "Quaest, 1º turno: Lula, 39%; Flávio Bolsonaro, 34%; Caiado,
+4%; Cury, 4%; Renan, 3%; Zema, 1%" só reconhecia Flávio Bolsonaro e
+João Cury — faltavam Lula, Caiado, Escritor Augusto Cury, Renan Santos
+e Zema.
+
+**Causas** (nenhuma aparecia com dados de teste em caixa mista):
+1. O TSE entrega os nomes de urna **em caixa alta** ("ESCRITOR AUGUSTO
+   CURY"). Aliases de nome completo ignoram maiúsculas e funcionavam
+   (por isso Flávio Bolsonaro aparecia), mas aliases de UMA palavra são
+   case-sensitive desde a correção do "Dias" — "CURY" e "CAIADO" nunca
+   casavam com "Cury"/"Caiado". Só quem vinha da Câmara/Senado (caixa
+   normal), como João Cury, casava — daí ele ganhar a notícia errada.
+2. Nome de urna de uma palavra só ("ZEMA", "LULA") não gera alias (regra
+   dos bugs #8/#10, contra colisão com apelidos de candidatos a
+   deputado) — então "Zema" sozinho nunca foi reconhecido.
+3. "Renan" (só o primeiro nome) não era alias de ninguém.
+4. A co-menção de pares agrupava por cargo do MANDATO, não da
+   candidatura (um senador que concorre a Presidente não contava como
+   par dos candidatos a Presidente).
+
+**Correções** (todas aplicadas na carga, em `config.py`, então valem
+para o JSON já sincronizado — sem ressincronizar):
+- `text_utils.smart_title_case()` converte nomes/aliases totalmente em
+  maiúsculas para caixa normal (conectores "de/da/do" minúsculos).
+- Para cargos majoritários (Presidente, Governador, Senador), o nome de
+  urna de uma palavra vira alias (a imprensa usa exatamente esse nome,
+  e o grupo é pequeno — sem o risco de colisão dos deputados).
+- `extra_aliases.py`: "Renan" para Renan Santos (exact_name).
+- `disambiguation.py`: o cargo usado nos pares é o da candidatura, e a
+  checagem do nome anterior considera também as palavras dos aliases
+  completos (nome de urna "Zema" + nome civil "Romeu Zema Neto" →
+  "Romeu Zema" volta a ser reconhecido).
+
+Testado: a manchete acima agora retorna exatamente os seis esperados
+(flavio-bolsonaro, lula, ronaldo-caiado, escritor-augusto-cury,
+renan-santos, zema), e os 10 casos anteriores (Troca, Cidadania, Moraes,
+Dias, Flávio) continuam corretos, agora com dados em caixa alta.
+
+## Desambiguação por co-menção de pares do mesmo cargo (caso "Cury")
+
+**Problema real**: dois candidatos monitorados genuinamente compartilham
+o sobrenome "Cury" — "Escritor Augusto Cury" (candidato a Presidente) e
+"João Cury" (outro cargo). Manchetes de pesquisa eleitoral como
+"Quaest, 1º turno: Lula, 39%; Flávio Bolsonaro, 34%; Caiado, 4%; Cury,
+4%; Zema, 1%" não têm nenhuma palavra de cargo/UF explícita, então os
+sinais anteriores (palavras de cargo e UF) não tinham como decidir.
+
+**Correção**: um novo sinal em `disambiguation.py` —
+`_peer_comention_bonus()`. Se o contexto da menção também cita (por
+alias) OUTRO político do MESMO cargo que o candidato sendo avaliado,
+isso conta como evidência de que o texto é sobre esse grupo de cargo
+(uma pesquisa listando vários candidatos a Presidente favorece o
+"Cury" que é candidato a Presidente). Implementado com um conjunto
+achatado de aliases por cargo (`_ALIASES_BY_CARGO`), então a checagem
+é O(1) por nome extraído do contexto, mesmo para cargos com milhares
+de pessoas (Deputado Estadual).
+
+`extract_cargo_category()` foi movida de `site_generator.py` para
+`text_utils.py` pra ser compartilhada entre o site e a desambiguação.
+
+**Resultado testado**: das 6 manchetes reais reportadas, 4 passaram a
+ser atribuídas ao Escritor Augusto Cury (as de pesquisa e a que cita
+Lula). As outras 2 ("Cury fará pente-fino... diz Hauly" e "Torcendo
+para que nada tenha acontecido, diz Cury...") não citam nenhum outro
+candidato do mesmo cargo — o sistema continua conservador e não
+atribui a ninguém, em vez de chutar. Os 6 casos anteriores
+(Flávio/Dr Flávio, Troca, Moraes, Dias) continuam corretos.
+
 ## Bloqueio de palavras comuns e sobrenomes de figuras não monitoradas
 
 Depois das correções anteriores, três novos casos reais apareceram —

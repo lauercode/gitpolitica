@@ -42,4 +42,9 @@ EXTRA_ALIASES = [
         "exact_name": "Flávio Bolsonaro",
         "aliases": ["Flávio"],
     },
+    {
+        # Pesquisas eleitorais citam só "Renan" (ex.: "Renan, 3%").
+        "exact_name": "Renan Santos",
+        "aliases": ["Renan"],
+    },
 ]

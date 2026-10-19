@@ -151,3 +151,58 @@ def extract_uf(role: str) -> str:
     if match and match.group(1) in _UFS_VALIDAS:
         return match.group(1)
     return "nacional"
+
+
+_CARGO_WRAPPER_PATTERN = re.compile(
+    r"^Candidato\(a\) a (.+?) \([A-Z]{2}\)(?: — Eleição \d{4})?$"
+)
+_UF_SUFFIX_PATTERN = re.compile(r"\s*\([A-Z]{2}\)\s*$")
+_GENERO_NEUTRO_PATTERN = re.compile(r"\((?:a|o)\)")
+
+
+def extract_cargo_category(role: str) -> str:
+    """
+    Extrai o cargo diretamente do texto do "role" — sem lista fixa de
+    categorias possíveis. Movido de site_generator.py pra cá pra ser
+    reaproveitado também por disambiguation.py (usado na desambiguação
+    por "co-menção de pares do mesmo cargo" — ver
+    disambiguation._peer_comention_bonus()).
+    """
+    role = (role or "").strip()
+
+    match = _CARGO_WRAPPER_PATTERN.match(role)
+    if match:
+        cargo_text = match.group(1)
+    else:
+        cargo_text = _UF_SUFFIX_PATTERN.sub("", role).strip() or role
+
+    cargo_text = _GENERO_NEUTRO_PATTERN.sub("", cargo_text)
+    return " ".join(cargo_text.split())
+
+
+_CONECTORES_NOME = {"de", "da", "do", "dos", "das", "e", "di", "du"}
+
+
+def smart_title_case(text: str) -> str:
+    """
+    Converte um nome TODO EM MAIÚSCULAS (como o TSE entrega os nomes de
+    urna: "ESCRITOR AUGUSTO CURY") para capitalização normal ("Escritor
+    Augusto Cury"), mantendo conectores minúsculos ("Tarcísio de
+    Freitas"). Só mexe em texto totalmente maiúsculo — nomes que já
+    vêm com capitalização normal (Câmara/Senado) passam intactos.
+
+    Bug real: o casamento de aliases de UMA PALAVRA é sensível a
+    maiúsculas (para "Dias" não bater em "dias"), então um alias
+    "CURY" nunca casava com "Cury" no texto da notícia.
+    """
+    if not text or not text.isupper():
+        return text
+
+    def cap(word: str) -> str:
+        return "-".join(part[:1].upper() + part[1:].lower() for part in word.split("-"))
+
+    words = text.split(" ")
+    out = []
+    for i, w in enumerate(words):
+        out.append(w.lower() if (i > 0 and w.lower() in _CONECTORES_NOME) else cap(w))
+    return " ".join(out)

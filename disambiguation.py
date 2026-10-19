@@ -91,8 +91,15 @@ def _non_surname_tokens_of(politician: dict) -> set[str]:
     isso sem precisar reconhecer "Escritor" como título/profissão
     numa lista fixa — funciona pra qualquer padrão parecido.
     """
-    tokens = politician["name"].strip().split()
-    return {normalize(t) for t in tokens[:-1]} if len(tokens) > 1 else set()
+    result: set[str] = set()
+    # Também considera os aliases de nome completo (ex.: nome de urna
+    # "Zema" tem nome civil "Romeu Zema Neto" — "Romeu" precisa contar
+    # como parte do nome dele, senão "Romeu Zema" era descartado).
+    for full in [politician["name"], *politician.get("aliases", [])]:
+        tokens = full.strip().split()
+        if len(tokens) > 1:
+            result.update(normalize(t) for t in tokens[:-1])
+    return result
 
 
 def check_preceding_name(
@@ -126,6 +133,61 @@ def check_preceding_name(
     return False, None  # 2+ bateram (raríssimo) — deixa pras outras checagens
 
 
+# --- Co-menção de pares do mesmo cargo -------------------------------
+#
+# Caso real que motivou isso: dois candidatos monitorados genuinamente
+# compartilham o sobrenome "Cury" — "Escritor Augusto Cury" (candidato
+# a Presidente) e "João Cury" (outro cargo). Manchetes como "Quaest, 1º
+# turno: Lula, 39%; Flávio Bolsonaro, 34%; Caiado, 4%; Cury, 4%;
+# Zema, 1%" não têm nenhuma palavra de cargo/UF explícita, mas um leitor
+# humano sabe na hora qual "Cury" é — o que está sendo listado ao lado
+# de OUTROS candidatos a Presidente. Esse sinal usa isso: se o contexto
+# também cita alguém do MESMO cargo que o candidato sendo avaliado, é
+# evidência de que o texto é sobre esse grupo de cargo.
+
+from config import POLITICIANS
+from text_utils import extract_cargo_category
+
+_NAME_LIKE_PATTERN = re.compile(r"[A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿ]+){0,3}")
+
+# cargo -> conjunto de todos os aliases (normalizados) de TODOS os
+# políticos desse cargo. Conjunto "achatado" de propósito: aqui só
+# importa saber SE alguém do mesmo cargo é citado, não QUEM — e
+# lookup em conjunto é O(1), ao contrário de varrer milhares de nomes
+# (o cargo "Deputado Estadual" tem milhares de pessoas).
+_ALIASES_BY_CARGO: dict[str, set[str]] = {}
+for _p in POLITICIANS:
+    _cargo = extract_cargo_category(_p.get("candidacy_role") or _p.get("role", ""))
+    _names = {normalize(a) for a in _p.get("aliases", [])} | {normalize(_p["name"])}
+    _ALIASES_BY_CARGO.setdefault(_cargo, set()).update(_names)
+
+
+def _peer_comention_bonus(politician: dict, context_text: str) -> int:
+    """
+    +1 se o contexto também menciona (por alias) OUTRO político do
+    mesmo cargo que `politician` — e não é o próprio nome dele.
+    """
+    # Cargo da CANDIDATURA em 2026, se houver (um senador que concorre a
+    # Presidente é par dos candidatos a Presidente numa pesquisa).
+    cargo = extract_cargo_category(politician.get("candidacy_role") or politician.get("role", ""))
+    peer_aliases = _ALIASES_BY_CARGO.get(cargo)
+    if not peer_aliases:
+        return 0
+
+    own_aliases = {normalize(a) for a in politician.get("aliases", [])} | {
+        normalize(politician["name"])
+    }
+
+    for match in _NAME_LIKE_PATTERN.finditer(context_text):
+        candidate = normalize(match.group(0))
+        # Ignora o próprio candidato (e o alias ambíguo em disputa).
+        if candidate in own_aliases:
+            continue
+        if candidate in peer_aliases:
+            return 1
+    return 0
+
+
 def score_context(politician: dict, context_text: str) -> int:
     """
     Pontua o quanto o contexto ao redor da menção "combina" com este
@@ -146,6 +208,8 @@ def score_context(politician: dict, context_text: str) -> int:
         uf_pattern = re.compile(rf"(?<![A-Za-zÀ-ÿ]){uf}(?![A-Za-zÀ-ÿ])")
         if uf_pattern.search(context_text):
             score += 1
+
+    score += _peer_comention_bonus(politician, context_text)
 
     return score
 
