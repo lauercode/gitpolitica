@@ -873,6 +873,31 @@ Testado: a manchete acima agora retorna exatamente os seis esperados
 renan-santos, zema), e os 10 casos anteriores (Troca, Cidadania, Moraes,
 Dias, Flávio) continuam corretos, agora com dados em caixa alta.
 
+## Co-menção de pares: bônus proporcional (correção em escala)
+
+A primeira versão da co-menção de pares dava +1 se QUALQUER candidato do
+mesmo cargo fosse citado no texto. Com os dados reais isso não
+discriminava nada: o cargo "Deputado Estadual" tem milhares de pessoas,
+então quase sempre algum deputado tem sobrenome Caiado, Renan ou Lula e
+somava ponto por coincidência — empatando com o candidato certo (a
+Presidente) e fazendo o sistema descartar "Lula", "Caiado", "Renan" e
+"Cury" na manchete "Quaest, 1º turno: Lula, 39%; Flávio Bolsonaro, 34%;
+Caiado, 4%; Cury, 4%; Renan, 3%; Zema, 1%".
+
+**Correção** (`disambiguation._peer_comention_bonus`): o bônus agora é
+`pares_citados / sqrt(tamanho_do_grupo)`, com piso de 0.15 (abaixo
+disso vale 0). Cinco dos ~12 candidatos a Presidente numa pesquisa
+(1.4) pesam muito mais que três coincidências entre milhares de
+deputados (≈0.05 → 0). Reproduzido com um grupo de 3.000 deputados
+sintéticos: antes só `flavio-bolsonaro` saía; depois, os seis esperados.
+
+**Comportamento conservador mantido**: quando não há nenhum par citado
+e dois candidatos monitorados dividem o mesmo sobrenome (ex.: "Cury
+fará pente-fino... diz Hauly"), o sistema continua sem atribuir a
+ninguém. Um desempate por prestígio do cargo (Presidente > Governador >
+...) resolveria esses casos, mas atribuiria ao candidato famoso notícias
+de um homônimo local — não implementado, decisão pendente.
+
 ## Desambiguação por co-menção de pares do mesmo cargo (caso "Cury")
 
 **Problema real**: dois candidatos monitorados genuinamente compartilham

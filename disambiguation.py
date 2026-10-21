@@ -156,39 +156,52 @@ _NAME_LIKE_PATTERN = re.compile(r"[A-ZÀ-Ý][a-zà-ÿ]+(?:\s+[A-ZÀ-Ý][a-zà-ÿ
 # lookup em conjunto é O(1), ao contrário de varrer milhares de nomes
 # (o cargo "Deputado Estadual" tem milhares de pessoas).
 _ALIASES_BY_CARGO: dict[str, set[str]] = {}
+_GROUP_SIZE: dict[str, int] = {}
 for _p in POLITICIANS:
     _cargo = extract_cargo_category(_p.get("candidacy_role") or _p.get("role", ""))
     _names = {normalize(a) for a in _p.get("aliases", [])} | {normalize(_p["name"])}
     _ALIASES_BY_CARGO.setdefault(_cargo, set()).update(_names)
+    _GROUP_SIZE[_cargo] = _GROUP_SIZE.get(_cargo, 0) + 1
 
 
-def _peer_comention_bonus(politician: dict, context_text: str) -> int:
+def _peer_comention_bonus(politician: dict, context_text: str) -> float:
     """
-    +1 se o contexto também menciona (por alias) OUTRO político do
-    mesmo cargo que `politician` — e não é o próprio nome dele.
+    Bônus proporcional à FRAÇÃO do grupo de cargo que aparece no texto
+    (hits / sqrt(tamanho do grupo)), com piso de 0.15.
+
+    Bug real: a primeira versão dava +1 se QUALQUER par do mesmo cargo
+    fosse citado. Em escala isso não discrimina nada: o cargo "Deputado
+    Estadual" tem milhares de pessoas, então quase sempre algum deputado
+    tem sobrenome Caiado/Renan/Lula e dava ponto coincidente — empatando
+    com o candidato certo e fazendo o sistema descartar a menção. Agora
+    cinco dos doze candidatos a Presidente numa pesquisa (1.4) pesa
+    muito mais que três coincidências entre milhares de deputados
+    (0.05, abaixo do piso, vira 0).
     """
-    # Cargo da CANDIDATURA em 2026, se houver (um senador que concorre a
-    # Presidente é par dos candidatos a Presidente numa pesquisa).
     cargo = extract_cargo_category(politician.get("candidacy_role") or politician.get("role", ""))
     peer_aliases = _ALIASES_BY_CARGO.get(cargo)
     if not peer_aliases:
-        return 0
+        return 0.0
 
     own_aliases = {normalize(a) for a in politician.get("aliases", [])} | {
         normalize(politician["name"])
     }
 
+    hits = set()
     for match in _NAME_LIKE_PATTERN.finditer(context_text):
         candidate = normalize(match.group(0))
-        # Ignora o próprio candidato (e o alias ambíguo em disputa).
         if candidate in own_aliases:
             continue
         if candidate in peer_aliases:
-            return 1
-    return 0
+            hits.add(candidate)
+
+    if not hits:
+        return 0.0
+    score = len(hits) / (_GROUP_SIZE.get(cargo, 1) ** 0.5)
+    return score if score >= 0.15 else 0.0
 
 
-def score_context(politician: dict, context_text: str) -> int:
+def score_context(politician: dict, context_text: str) -> float:
     """
     Pontua o quanto o contexto ao redor da menção "combina" com este
     político. Quanto maior, mais provável que a menção seja sobre ele.
@@ -233,7 +246,7 @@ def resolve_ambiguous_mention(
     scored.sort(key=lambda pair: pair[0], reverse=True)
 
     best_score, best_politician = scored[0]
-    if best_score == 0:
+    if best_score <= 0:
         return None  # nenhuma pista — não arrisca
 
     # Se houver empate no topo, também não arrisca.
