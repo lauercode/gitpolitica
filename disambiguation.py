@@ -257,14 +257,53 @@ def resolve_ambiguous_mention(
     return best_politician
 
 
+_FOLLOWING_NAME_PATTERN = re.compile(r"^ +([A-ZÀ-Ý][a-zà-ÿ]+)")
+
+
+def _all_name_tokens_of(politician: dict) -> set[str]:
+    """Todos os tokens (inclusive o sobrenome) do nome e de todos os aliases."""
+    tokens: set[str] = set()
+    for full in [politician["name"], *politician.get("aliases", [])]:
+        tokens.update(normalize(t) for t in full.split())
+    return tokens
+
+
+def filter_by_following_name(
+    text: str, match_end: int, candidates: list[dict]
+) -> list[dict]:
+    """
+    Espelho de check_preceding_name: olha a palavra CAPITALIZADA logo
+    DEPOIS da menção. Se ela não faz parte do nome do candidato, a
+    menção de uma palavra só é, na verdade, pedaço de um nome próprio
+    maior — "Nossa Senhora", "Lava Jato", "Anita Harley", "Willer
+    Tomaz", "Mestre Zu", "Flávio Dino" — e não uma menção ao candidato.
+    Devolve só os candidatos para os quais a palavra seguinte é
+    compatível (lista vazia = descarta).
+    """
+    following = _FOLLOWING_NAME_PATTERN.match(text[match_end:])
+    if not following:
+        return candidates
+    word = normalize(following.group(1))
+    return [c for c in candidates if word in _all_name_tokens_of(c)]
+
+
 def resolve_mention(
-    candidates: list[dict], text: str, match_start: int, context_text: str
+    candidates: list[dict],
+    text: str,
+    match_start: int,
+    context_text: str,
+    match_end: int | None = None,
 ) -> dict | None:
     """
     Ponto de entrada único usado por matcher.py: combina a checagem de
     nome precedente (prioridade máxima — pode descartar mesmo com 1
     candidato só) com a desambiguação por cargo/UF.
     """
+    if match_end is not None:
+        candidates = filter_by_following_name(text, match_end, candidates)
+        if not candidates:
+            return None
+
     should_discard, resolved_directly = check_preceding_name(text, match_start, candidates)
     if should_discard:
         return None

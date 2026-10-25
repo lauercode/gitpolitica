@@ -65,7 +65,8 @@ _PREFIXOS_TITULO_PATENTE = {
 # exaustiva — adicionar aqui conforme novos casos aparecerem.
 _PALAVRAS_COMUNS_BLOQUEADAS = {
     "troca", "trocas", "cidadania", "crise", "cores", "dias", "tinha",
-    "contas", "portas", "fortes", "marcas",
+    "contas", "portas", "fortes", "marcas", "cidade", "cidades",
+    "trabalho", "mestre", "nossa", "jato", "lava",
 }
 
 # Sobrenomes de figuras públicas reais MUITO conhecidas que não são
@@ -79,7 +80,7 @@ _PALAVRAS_COMUNS_BLOQUEADAS = {
 # raramente). Revisar periodicamente.
 _SOBRENOMES_FIGURAS_NAO_MONITORADAS = {
     "moraes", "mendonca", "fux", "barroso", "zanin", "fachin",
-    "toffoli", "nunes", "cristiano",
+    "toffoli",
 }
 
 

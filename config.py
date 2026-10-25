@@ -120,6 +120,24 @@ def _normalize_and_enrich(politicians: list[dict]) -> None:
         p["name"] = smart_title_case(p["name"])
         p["aliases"] = [smart_title_case(a) for a in p.get("aliases", [])]
 
+        # Remove (retroativamente) aliases de UMA palavra bloqueados
+        # (palavras comuns do português, ver text_utils).
+        p["aliases"] = [
+            a for a in p["aliases"]
+            if " " in a or not is_blocked_alias_word(normalize(a))
+        ]
+
+        # Apelido de urna: se o nome civil (outro alias de nome completo)
+        # NÃO contém o último token do nome de urna, esse token não é
+        # sobrenome de verdade ("Roberto Cidade", "Gardênia Grigório do
+        # Trabalho", "Duda do Lava Jato") e não vira alias de uma palavra.
+        parts = p["name"].split()
+        if p.get("source") == "tse" and len(parts) > 1:
+            sn = normalize(parts[-1])
+            civil = [a for a in p["aliases"] if " " in a and normalize(a) != normalize(p["name"])]
+            if civil and not any(sn in {normalize(t) for t in a.split()} for a in civil):
+                p["aliases"] = [a for a in p["aliases"] if " " in a or normalize(a) != sn]
+
         if p.get("source") != "tse" or " " in p["name"] or len(p["name"]) < 4:
             continue
         cargo = extract_cargo_category(p.get("candidacy_role") or p.get("role", ""))

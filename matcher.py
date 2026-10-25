@@ -60,6 +60,7 @@ def _resolve(
     match_start: int,
     context_text: str,
     is_single_word: bool,
+    match_end: int | None = None,
 ) -> dict | None:
     """
     Atalho de resolução. Para aliases/candidatos de uma palavra só,
@@ -68,7 +69,7 @@ def _resolve(
     monitorados quando há mais de um candidato.
     """
     if is_single_word:
-        return resolve_mention(candidates, text, match_start, context_text)
+        return resolve_mention(candidates, text, match_start, context_text, match_end)
     if len(candidates) == 1:
         return candidates[0]
     return resolve_ambiguous_mention(candidates, context_text)
@@ -121,6 +122,7 @@ def find_mentioned_exact(text: str) -> list[dict]:
                 match.start(),
                 _context_window(text, match.start(), match.end()),
                 is_single_word,
+                match.end(),
             )
             if resolved:
                 raw_matches.append((match.start(), match.end(), resolved))

@@ -873,6 +873,47 @@ Testado: a manchete acima agora retorna exatamente os seis esperados
 renan-santos, zema), e os 10 casos anteriores (Troca, Cidadania, Moraes,
 Dias, Flávio) continuam corretos, agora com dados em caixa alta.
 
+## Apelidos de urna virando "sobrenome" (8 casos reais)
+
+**Sintoma**: notícias sem nenhuma relação com política foram atribuídas a
+candidatos só porque uma palavra capitalizada do texto coincidia com a
+ÚLTIMA palavra do nome de urna: "Cidade na Itália..." → Roberto Cidade;
+"São Paulo" → Sida do Mercantil São Paulo; "Nossa Senhora" → Evandro
+Lourenço o Gente Nossa; "Justiça do Trabalho" → Gardênia Grigório do
+Trabalho; "Mestre Zu" → Santiago Mestre; "Anita Harley" → Maria Anita;
+"Lava Jato" → Duda do Lava Jato; "Willer Tomaz" → Tex Willer.
+
+**Causa**: o alias automático de sobrenome é "a última palavra do nome
+de urna". Em apelidos ("Duda do Lava Jato", "Gente Nossa") essa palavra
+não é sobrenome — é substantivo comum, lugar, ou primeiro nome — e casa
+dentro de nomes próprios maiores.
+
+**Correções**:
+1. `disambiguation.filter_by_following_name()`, espelho da checagem do
+   nome anterior: se a palavra CAPITALIZADA logo depois da menção não faz
+   parte do nome do candidato, a menção é só um pedaço de um nome maior
+   ("Nossa Senhora", "Anita Harley", "Willer Tomaz", "Mestre Zu", e
+   também "Flávio Dino" não vira Flávio Bolsonaro) e é descartada.
+2. Regra do nome civil (`config._normalize_and_enrich`): se o candidato
+   tem nome civil (outro alias completo) que NÃO contém a última palavra
+   do nome de urna, ela não vira alias de sobrenome. "Roberto Cidade" com
+   nome civil "Roberto Silva Santos" perde o alias "Cidade"; "Flávio
+   Bolsonaro" (civil "Flávio Nantes Bolsonaro") mantém "Bolsonaro".
+3. Palavras comuns bloqueadas também retroativamente na carga (cidade,
+   trabalho, mestre, nossa, jato, lava) — vale sem ressincronizar.
+4. Correção de um erro anterior: `nunes` e `cristiano` estavam na lista
+   de sobrenomes de ministros do STF e bloqueavam candidatos legítimos
+   (Nunes é sobrenome comum, Cristiano é primeiro nome). Removidos.
+
+**Testado**: as 8 manchetes reais deixaram de gerar falso positivo; os
+candidatos legítimos (Lula, Flávio Bolsonaro, Caiado, Cury, Renan, Zema)
+continuam sendo reconhecidos; 13 casos anteriores sem regressão.
+
+**Limite conhecido**: um nome de urna que coincide com o nome civil
+mantém o alias de sobrenome mesmo sendo palavra comum — por isso a lista
+de palavras bloqueadas existe e deve crescer conforme novos casos
+aparecerem.
+
 ## Co-menção de pares: bônus proporcional (correção em escala)
 
 A primeira versão da co-menção de pares dava +1 se QUALQUER candidato do
