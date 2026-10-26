@@ -392,4 +392,9 @@ RSS_SOURCES = [
         "name": "Valor Econômico",
         "url": "https://pox.globo.com/rss/valor",
     },
+    # Carta Capital
+    {
+        "name": "Valor Econômico",
+        "url": "https://www.cartacapital.com.br/feed",
+    },
 ]
