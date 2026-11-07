@@ -71,6 +71,11 @@ jobs:
         run: |
           git push origin HEAD:main
 
+      - name: Gera o grafo de relações
+        run: |
+          python3 grafo/build_graph.py --repo data/repo --out data/site/grafo --fotos grafo/fotos --top 300
+          [ -d grafo/fotos ] && cp -r grafo/fotos data/site/grafo/fotos || true
+
       - name: Publica o site no GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

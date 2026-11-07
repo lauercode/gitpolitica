@@ -1,0 +1,34 @@
+{
+  "_ajuda": "ignorar: nomes que não devem virar bloco. juntar: nome canônico -> variantes. tipos: força o tipo de um item. adicionar: itens conhecidos com apelidos.",
+  "ignorar": [
+    "Boa Vista",
+    "Bolsa Família",
+    "Campanha de Lula",
+    "Dark Horse",
+    "Defesa Civil",
+    "El Niño",
+    "Fernando de Noronha",
+    "Jornal Anhanguera",
+    "Jornal do Acre",
+    "João Pessoa",
+    "Nova Iorque",
+    "Rio Branco"
+  ],
+  "juntar": {
+    "Construtora Alfa": [
+      "Construtora Alfa S.A.",
+      "Alfa S.A.",
+      "Alfa"
+    ]
+  },
+  "tipos": {},
+  "adicionar": [
+    {
+      "nome": "Banco Meridiano",
+      "tipo": "empresa",
+      "apelidos": [
+        "Meridiano"
+      ]
+    }
+  ]
+}

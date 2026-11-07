@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grafo GitPolítica</title>
+<style>
+:root{--bg:#080c1c;--ink:#eaf0ff;--mut:#94a2c8;--glass:rgba(255,255,255,.08);--edge:rgba(255,255,255,.17);--a1:#2f4bff;--a2:#c026d3;--a3:#0ea5a5;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit}
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.bg i{position:absolute;width:55vmax;height:55vmax;border-radius:50%;filter:blur(90px);opacity:.45;animation:dr 28s ease-in-out infinite alternate}
+.bg i:nth-child(1){background:var(--a1);left:-15vmax;top:-10vmax}.bg i:nth-child(2){background:var(--a2);right:-18vmax;top:10vmax;animation-delay:-9s}.bg i:nth-child(3){background:var(--a3);left:20vmax;bottom:-25vmax;animation-delay:-17s}
+@keyframes dr{to{transform:translate(12vmax,8vmax) scale(1.15)}}
+header{position:fixed;z-index:8;top:0;left:0;right:0;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 0;pointer-events:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header h1{margin:0;font-size:17px;letter-spacing:-.01em}header h1 span{display:block;font-size:11px;font-weight:400;color:var(--mut)}
+#hint{font-size:12px;color:var(--mut)}
+#back{pointer-events:auto;display:none;padding:8px 14px;border-radius:999px;border:1px solid var(--edge);background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer}
+body.ego #back{display:block}body.ego #hint{display:none}
+#gal{position:fixed;inset:0;z-index:2;overflow:auto;padding:96px 24px 40px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:22px;justify-content:center;align-content:center}
+.pc{position:relative;width:172px;padding:0;border:0;background:none;text-align:left;cursor:pointer;perspective:800px;transition:opacity .3s,transform .35s cubic-bezier(.2,.8,.2,1),filter .3s;transition-delay:calc(var(--i)*12ms)}
+.in{display:block;position:relative;padding:10px 10px 12px;border-radius:20px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--edge);box-shadow:0 18px 40px -18px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.28);transform-style:preserve-3d;transition:transform .18s ease-out}
+.in::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .2s;background:radial-gradient(190px circle at var(--mx,50%) var(--my,0%),rgba(255,255,255,.32),transparent 60%)}
+.pc:hover .in::after{opacity:1}
+.pc strong{display:block;margin:10px 4px 2px;font-size:15px}.pc em,.ctr em,.rin em{display:block;margin:0 4px;font-style:normal;font-size:11px;color:var(--mut)}
+.rk{position:absolute;z-index:2;left:6px;top:6px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-size:11px;font-style:normal;transform:translateZ(24px)}
+body.ego .pc:not(.me){opacity:0;transform:scale(.9);filter:blur(4px);pointer-events:none;transition-duration:.16s;transition-delay:0s}.pc.me .in{box-shadow:0 0 0 2px var(--c),0 22px 54px -14px var(--c)}
+.av{display:block;position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,hsl(var(--h) 70% 56%),hsl(calc(var(--h) + 50) 70% 34%))}
+.av .ini{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;font-weight:700;color:#fff;opacity:.92}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#ego{position:fixed;inset:0;z-index:4;opacity:0;pointer-events:none;transition:opacity .2s}
+#ego.on,#lines.on{opacity:1}
+#lines{position:fixed;inset:0;z-index:1;width:100%;height:100%;opacity:0;transition:opacity .2s;pointer-events:none;background-image:radial-gradient(rgba(150,180,255,.09) 1px,transparent 1.5px);background-size:24px 24px}
+.ln,.fl{fill:none;stroke:var(--c);stroke-linecap:round;stroke-linejoin:round}
+.ln{stroke-dasharray:1;stroke-dashoffset:1;opacity:.8;animation:dw .45s cubic-bezier(.4,.1,.2,1) both;animation-delay:calc(var(--i)*30ms + 40ms)}
+.fl{stroke-dasharray:.025 .14;stroke-width:4;opacity:0;filter:drop-shadow(0 0 4px var(--c));animation:fi .2s .5s forwards,mv 1.1s linear infinite}
+.ln.hot{opacity:1;stroke-width:4.5}
+@keyframes dw{to{stroke-dashoffset:0}}@keyframes fi{to{opacity:.9}}@keyframes mv{to{stroke-dashoffset:-.165}}
+.ctr{position:fixed;z-index:3;transform:translate(-50%,-50%);padding:12px;border-radius:22px;background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--edge);box-shadow:0 0 0 2px var(--c),0 30px 70px -20px var(--c);transition:left .8s cubic-bezier(.2,.8,.2,1),top .8s cubic-bezier(.2,.8,.2,1),width .8s cubic-bezier(.2,.8,.2,1)}
+.ctr small,.rin small{display:block;margin:10px 4px 0;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--c);font-weight:700}
+.ctr strong{display:block;margin:0 4px 2px;font-size:16px}
+.rg{position:fixed;z-index:3;pointer-events:auto;width:156px;padding:0;border:0;background:none;cursor:pointer;text-align:left;transform:translate(-50%,-50%);animation:pop .3s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*30ms + 260ms)}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-50%) scale(.4)}}
+.rin{display:block;padding:10px 12px 10px 16px;border-radius:14px;position:relative;overflow:hidden;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--edge);box-shadow:0 12px 30px -14px rgba(0,0,0,.5);transition:transform .2s,box-shadow .2s}
+.rin::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.rin small{margin:0}.rin strong{display:block;font-size:13px;margin:2px 0}
+.rg:hover .rin{transform:scale(1.08);box-shadow:0 0 0 2px var(--c),0 18px 40px -10px var(--c)}
+#panel{position:fixed;z-index:9;top:calc(70px + env(safe-area-inset-top,0px));right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(370px,calc(100vw - 32px));overflow:auto;padding:18px;border-radius:20px;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--edge);box-shadow:0 30px 60px -20px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .3s}
+#panel[hidden]{display:block;transform:translateX(120%);opacity:0;pointer-events:none}
+.tag{color:var(--c);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+#panel h2{margin:4px 0;font-size:19px}#panel h3{margin:12px 0 4px;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.x{position:absolute;right:12px;top:10px;border:0;background:none;color:var(--mut);font-size:22px;cursor:pointer}
+ul{margin:8px 0;padding-left:16px}li{margin:8px 0}li a{color:var(--ink)}li small{display:block;color:var(--mut)}
+.go{border:0;background:none;font-weight:600;cursor:pointer;padding:4px 0;text-decoration:underline}
+.note{margin-top:14px;font-size:11px;color:var(--mut)}
+@media (max-width:720px){#panel{top:auto;height:50vh;left:16px;right:16px;width:auto}#panel[hidden]{transform:translateY(120%)}.pc{width:150px}}
+#sb{pointer-events:auto;position:relative;flex:1;max-width:440px}
+#q{width:100%;box-sizing:border-box;padding:10px 14px;border-radius:999px;border:1px solid var(--edge);background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--ink);font:inherit;outline:none}
+#q:focus{box-shadow:0 0 0 2px var(--a1)}
+#res{position:absolute;left:0;right:0;top:calc(100% + 8px);max-height:60vh;overflow:auto;padding:6px;border-radius:16px;background:rgba(14,18,40,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--edge);box-shadow:0 24px 50px -20px #000}
+#res button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:10px;background:none;text-align:left;cursor:pointer}
+#res button:hover{background:var(--glass)}
+#res i{width:10px;height:10px;border-radius:50%;flex:none}#res small{margin-left:auto;color:var(--mut);white-space:nowrap}#res p{margin:8px;color:var(--mut)}
+#more{flex-basis:auto;margin:10px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--edge);background:var(--glass);cursor:pointer}
+#more[hidden]{display:none}body.ego #more{opacity:0;pointer-events:none}
+@media (max-width:900px){#hint{display:none}}
+.pad{fill:#0b1020;stroke:var(--c);stroke-width:2.5;opacity:0;animation:fi .15s forwards;animation-delay:calc(var(--i)*30ms + 440ms)}.pad.s{animation-delay:calc(var(--i)*30ms)}
+</style>
+</head>
+<body>
+<div class="bg"><i></i><i></i><i></i></div>
+<header><h1>Grafo GitPolítica<span>ligações = citados nas mesmas notícias · fotos: TSE (CC BY)</span></h1><div id="sb"><input id="q" type="search" placeholder="Buscar político, empresa, caso, órgão…" autocomplete="off" aria-label="Buscar"><div id="res" hidden></div></div><span id="hint">Clique em um político para ver as ligações</span><button id="back">← Voltar</button></header>
+<main id="gal"></main>
+<svg id="lines"></svg><div id="ego"></div><div id="sel"></div>
+<aside id="panel" hidden></aside>
+<script>
+/*DATA*/
+const T={politico:["Político","#7c9cff"],empresa:["Empresa","#ffb86b"],escandalo:["Caso","#ff6b8b"],orgao:["Órgão","#2dd4bf"],partido:["Partido","#c4a1ff"],pessoa:["Pessoa","#f0d94a"]};
+const nodes=NODES.map(([id,name,type,foto,c])=>({id,name,type,foto,c,nb:[],ev:new Set()}));
+const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
+const links=LINKS.map(([a,b,ev])=>({a:byId[a],b:byId[b],ev,w:ev.length}));
+links.forEach(l=>{l.a.nb.push(l);l.b.nb.push(l);l.ev.forEach(i=>{l.a.ev.add(i);l.b.ev.add(i)})});
+
+const hue=s=>[...s].reduce((a,c)=>a+c.charCodeAt(0)*7,0)%360;
+const ini=s=>s.split(" ").slice(0,2).map(w=>w[0]).join("");
+const av=n=>`<span class="av" style="--h:${hue(n.name)}"><span class="ini">${ini(n.name)}</span>${n.foto?`<img src="${n.foto}" alt="" loading="lazy" onerror="this.remove()">`:""}</span>`;
+const plural=w=>`${w} ${w>1?"notícias":"notícia"}`;
+
+const gal=document.getElementById("gal"),ego=document.getElementById("ego"),panel=document.getElementById("panel");
+let cur=null,armed=false,born=0,lastExit=0,G={rx:400,ry:250};
+const NS="http://www.w3.org/2000/svg";
+
+const pols=nodes.filter(n=>n.type==="politico").sort((a,b)=>(b.c||b.ev.size)-(a.c||a.ev.size));
+pols.forEach((n,i)=>n.rank=i+1);
+const nz=x=>x.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+let q="",limit=24;
+const more=document.createElement("button");more.id="more";more.textContent="Mostrar mais";more.onclick=()=>{limit+=24;draw()};
+function card(n,i){
+  const el=document.createElement("button");el.className="pc";el.style.setProperty("--i",i%24);el.style.setProperty("--c",T.politico[1]);
+  el.innerHTML=`<span class="in"><i class="rk">#${n.rank}</i>${av(n)}<strong>${n.name}</strong><em>${plural(n.c||n.ev.size)} · ${n.nb.length} ligações</em></span>`;
+  const inn=el.firstChild;
+  el.addEventListener("pointermove",e=>{const r=el.getBoundingClientRect(),px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+    inn.style.transform=`rotateX(${(.5-py)*16}deg) rotateY(${(px-.5)*20}deg) translateZ(14px)`;inn.style.setProperty("--mx",px*100+"%");inn.style.setProperty("--my",py*100+"%")});
+  el.addEventListener("pointerleave",()=>inn.style.transform="");
+  el.addEventListener("click",()=>enter(n,el));
+  return el}
+function draw(){
+  const list=pols.filter(n=>!q||nz(n.name).includes(q));
+  gal.innerHTML="";list.slice(0,q?60:limit).forEach((n,i)=>gal.appendChild(card(n,i)));
+  more.hidden=!!q||limit>=list.length;gal.appendChild(more)}
+draw();
+
+const lines=document.getElementById("lines");
+function enter(n,el){
+  if(cur===n)return;
+  document.querySelectorAll(".pc.me").forEach(e=>e.classList.remove("me"));
+  cur=n;armed=false;born=performance.now();panel.hidden=true;el.classList.add("me");
+  const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,W=innerWidth,H=innerHeight,R=Math.min(320,Math.min(W,H)*.36);
+  G={cx,cy,rx:R*1.5,ry:R*.95};
+  const ok=[];for(let k=0;k<72;k++){const a=k/72*6.283-1.571,x=cx+Math.cos(a)*G.rx,y=cy+Math.sin(a)*G.ry;if(x>90&&x<W-90&&y>90&&y<H-50)ok.push(a)}
+  const ring=[...n.nb].sort((a,b)=>b.w-a.w).slice(0,Math.max(4,Math.min(W<720?7:12,Math.floor(ok.length/5.5))));
+  ego.innerHTML="";lines.innerHTML="";
+  ring.forEach((l,i)=>{const o=l.a===n?l.b:l.a,ang=ok.length>=ring.length?ok[Math.floor(i*ok.length/ring.length)]:-1.571+i*6.283/ring.length,
+    x=Math.min(W-90,Math.max(90,cx+Math.cos(ang)*G.rx)),y=Math.min(H-50,Math.max(90,cy+Math.sin(ang)*G.ry));
+    const p=document.createElementNS(NS,"path");p.setAttribute("pathLength",1);
+    const off=(i-(ring.length-1)/2)*5,hz=Math.abs(x-cx)>=Math.abs(y-cy),x0=hz?cx:cx+off,y0=hz?cy+off:cy;
+    const ddx=x0-x,ddy=y0-y,sc=Math.min(1,78/(Math.abs(ddx)||1e9),34/(Math.abs(ddy)||1e9)),ex=x+ddx*sc,ey=y+ddy*sc,
+      ax=Math.abs(ex-x0),ay=Math.abs(ey-y0),sx=Math.sign(ex-x0)||1,sy=Math.sign(ey-y0)||1;
+    p.setAttribute("d",ax>=ay?`M${x0} ${y0}h${sx*(ax-ay)}L${ex} ${ey}`:`M${x0} ${y0}v${sy*(ay-ax)}L${ex} ${ey}`);
+    p.style.cssText=`--c:${T[o.type][1]};--i:${i};stroke-width:${1.5+l.w*.8}`;
+    const f=p.cloneNode();p.setAttribute("class","ln");f.setAttribute("class","fl");lines.append(p,f);
+    [[x0,y0,"pad s",3.5],[ex,ey,"pad",6]].forEach(([px,py,cl,r])=>{const d=document.createElementNS(NS,"circle");d.setAttribute("cx",px);d.setAttribute("cy",py);d.setAttribute("r",r);d.setAttribute("class",cl);d.style.cssText=`--c:${T[o.type][1]};--i:${i}`;lines.append(d)});
+    const b=document.createElement("button");b.className="rg";b.style.cssText=`left:${x}px;top:${y}px;--c:${T[o.type][1]};--i:${i}`;
+    b.innerHTML=`<span class="rin"><small>${T[o.type][0]}</small><strong>${o.name}</strong><em>${plural(l.w)}</em></span>`;
+    b.onpointerenter=()=>p.classList.add("hot");b.onpointerleave=()=>p.classList.remove("hot");
+    b.onclick=()=>show(n,o,l);ego.appendChild(b)});
+  ego.classList.add("on");lines.classList.add("on");document.body.classList.add("ego");
+}
+function exit(){if(!cur)return;cur=null;lastExit=performance.now();document.querySelectorAll(".pc.me").forEach(e=>e.classList.remove("me"));ego.classList.remove("on");lines.classList.remove("on");document.body.classList.remove("ego");panel.hidden=true;setTimeout(()=>{if(!cur){ego.innerHTML="";lines.innerHTML="";sel.innerHTML=""}},500)}
+function show(n,o,l){panel.style.setProperty("--c",T[o.type][1]);
+  panel.innerHTML=`<button class="x" aria-label="Fechar">×</button><span class="tag">${T[o.type][0]}</span><h2>${n.name} ↔ ${o.name}</h2><h3>${plural(l.w)} em comum</h3><ul>${l.ev.map(i=>`<li><a href="${NEWS[i][3]}" target="_blank" rel="noopener">${NEWS[i][0]}</a><small>${NEWS[i][2]} · ${NEWS[i][1]}</small></li>`).join("")}</ul><p class="note">“Ligação” significa apenas que os dois itens foram citados na mesma notícia. Não indica envolvimento nem culpa.</p>`;
+  panel.hidden=false}
+panel.addEventListener("click",e=>{if(e.target.closest(".x"))panel.hidden=true});
+document.getElementById("back").onclick=exit;
+addEventListener("keydown",e=>{if(e.key==="Escape")exit()});
+addEventListener("click",e=>{if(cur&&!e.target.closest(".rg,.pc,.ctr,#sb,#panel,#back"))exit()});
+const qi=document.getElementById("q"),res=document.getElementById("res"),sel=document.getElementById("sel");
+qi.addEventListener("input",()=>{q=nz(qi.value.trim());limit=24;draw();
+  if(!q){res.hidden=true;return}
+  const hits=nodes.filter(n=>nz(n.name).includes(q)).sort((a,b)=>(nz(b.name).startsWith(q)-nz(a.name).startsWith(q))||((b.c||b.ev.size)-(a.c||a.ev.size))).slice(0,10);
+  res.innerHTML=hits.map(n=>`<button data-id="${n.id}"><i style="background:${T[n.type][1]}"></i>${n.name}<small>${T[n.type][0]} · ${plural(n.c||n.ev.size)}</small></button>`).join("")||"<p>Nada encontrado.</p>";
+  res.hidden=false});
+res.addEventListener("click",e=>{const b=e.target.closest("button");if(b){res.hidden=true;fromSearch(byId[b.dataset.id])}});
+qi.addEventListener("keydown",e=>{if(e.key==="Enter"){const b=res.querySelector("button");if(b)b.click()}});
+function fromSearch(n){
+  panel.hidden=true;sel.innerHTML="";cur=null;
+  const c=document.createElement("div");c.className="ctr";c.style.setProperty("--c",T[n.type][1]);
+  c.innerHTML=`${av(n)}<small>${T[n.type][0]}</small><strong>${n.name}</strong><em>${plural(n.c||n.ev.size)} · ${n.nb.length} ligações</em>`;
+  c.style.cssText+=";left:50%;top:calc(50% + 30px);width:200px;transition:none";sel.appendChild(c);enter(n,c)}
+</script>
+</body>
+</html>
