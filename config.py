@@ -349,7 +349,7 @@ RSS_SOURCES = [
     },
     {
         "name": "G1 - Regiões: Piauí",
-        "url": " https://g1.globo.com/dynamo/pi/piaui/rss2.xml",
+        "url": "https://g1.globo.com/dynamo/pi/piaui/rss2.xml",
     },
     {
         "name": "G1 - Regiões: Rio de Janeiro",
